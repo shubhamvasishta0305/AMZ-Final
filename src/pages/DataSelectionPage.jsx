@@ -5,6 +5,7 @@ import { availableSellerIds } from '../data/mockData';
 import { ChevronDown, Download, ArrowRight, Loader2 } from 'lucide-react';
 
 const DataSelectionPage = () => {
+
   const [selectedSeller, setSelectedSeller] = useState('');
   const [sellerData, setSellerData] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
