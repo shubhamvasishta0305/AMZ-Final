@@ -49,7 +49,7 @@ const Navbar = () => {
             <Info className="h-4 w-4" />
             <span>About</span>
           </button>
-          <button className="flex items-center space-x-1 px-3 py-1 text-gray-300 hover:text-white text-xs rounded hover:bg-gray-800 transition-colors border border-gray-700 bg-orange-600">
+          <button className="flex items-center space-x-1 px-3 py-1 hover:text-white text-xs rounded hover:bg-gray-800 transition-colors border border-gray-700 bg-orange-400">
             <LogOut className="h-4 w-4" />
             <span>Logout</span>
           </button>

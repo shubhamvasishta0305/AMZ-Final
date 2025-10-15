@@ -1,18 +1,31 @@
 // Mock data for the application
 
-// Available seller IDs
-export const availableSellerIds = [
-  { id: 'ACME-CORP', name: 'ACME Corporation' },
-  { id: 'TECH-SOLUTIONS', name: 'Tech Solutions Ltd' },
-  { id: 'GLOBAL-TRADERS', name: 'Global Traders Inc' },
-  { id: 'PRIME-RETAIL', name: 'Prime Retail Group' }
+// Available categories from the API - these will be populated dynamically
+export const availableCategories = [
+  { id: 'All Categories', name: 'All Categories' },
+  { id: 'Clothing', name: 'Clothing' },
+  { id: 'Electronics', name: 'Electronics' },
+  { id: 'Beauty', name: 'Beauty & Personal Care' },
+  { id: 'Home', name: 'Home & Kitchen' },
+  { id: 'Sports', name: 'Sports & Outdoors' }
 ];
+
+// This function will be used to get available categories from API data
+export const getAvailableCategoriesFromData = (data) => {
+  if (!data || !Array.isArray(data)) return availableCategories;
+  
+  const categories = [...new Set(data.map(item => item.Category).filter(Boolean))];
+  return [
+    { id: 'All Categories', name: 'All Categories' },
+    ...categories.map(category => ({ id: category, name: category }))
+  ];
+};
 
 // Gold standard product data (the benchmark product)
 export const goldStandardProduct = {
   id: 'B0FDWZ18JV',
   title: 'BIBA Women Cotton Straight Kurta',
-  amazonUrl: 'https://www.amazon.in/dp/B0FDWZ18JV/',
+  amazonUrl: 'https://www.amazon.in/dp/B0DFWF5CNC/ref=sspa_dk_detail_3?pd_rd_i=B0DFWF5CNC&pd_rd_w=Klywh&content-id=amzn1.sym.00892a2d-bd0e-4f46-9295-e128db4dc924&pf_rd_p=00892a2d-bd0e-4f46-9295-e128db4dc924&pf_rd_r=JPENK5Y8CGJKM59K875C&pd_rd_wg=YONFZ&pd_rd_r=f3c899dd-d15e-42f6-824a-800ce2ccdc99&sp_csd=d2lkZ2V0TmFtZT1zcF9kZXRhaWwy&th=1&psc=1',
   price: '₹849',
   rating: 4.2,
   reviews: 2341,

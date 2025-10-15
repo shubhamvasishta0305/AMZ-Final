@@ -53,23 +53,16 @@ const GoldStandardPanel = () => {
               <ExternalLink className="h-4 w-4" />
             </a>
           </div>
-          {iframeError && (
+          {/* {iframeError && (
             <div className="mt-2 flex items-center space-x-2 text-amber-600 text-sm">
               <AlertTriangle className="h-4 w-4" />
               <span>Direct Amazon view unavailable - showing mockup</span>
             </div>
-          )}
+          )} */}
         </div>
 
         <div className="p-4 space-y-4 overflow-y-auto" style={{ maxHeight: 'calc(100% - 80px)' }}>
-          {/* Product Image */}
-          <div className="aspect-square bg-gray-50 rounded-lg overflow-hidden">
-            <img
-              src={goldStandardProduct.images[0]}
-              alt={goldStandardProduct.title}
-              className="w-full h-full object-cover"
-            />
-          </div>
+
 
           {/* Product Info */}
           <div className="space-y-3">
@@ -116,15 +109,6 @@ const GoldStandardPanel = () => {
               </div>
             </div>
 
-            {/* Amazon-like buttons */}
-            <div className="space-y-2 pt-2">
-              <button className="w-full bg-yellow-400 hover:bg-yellow-500 text-black font-medium py-2 px-4 rounded-lg text-sm">
-                Add to Cart
-              </button>
-              <button className="w-full bg-orange-500 hover:bg-orange-600 text-white font-medium py-2 px-4 rounded-lg text-sm">
-                Buy Now
-              </button>
-            </div>
           </div>
         </div>
       </div>

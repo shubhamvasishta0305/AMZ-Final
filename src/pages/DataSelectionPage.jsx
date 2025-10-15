@@ -1,21 +1,56 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { fetchSellerData } from '../api/mockApi';
-import { availableSellerIds } from '../data/mockData';
+import { fetchSheetData, fetchSellerData } from '../api/mockApi';
+import { availableCategories, getAvailableCategoriesFromData } from '../data/mockData';
 import { ChevronDown, Download, ArrowRight, Loader2 } from 'lucide-react';
 
 const DataSelectionPage = () => {
 
   const [selectedSeller, setSelectedSeller] = useState('');
   const [sellerData, setSellerData] = useState(null);
+  const [rawFilteredData, setRawFilteredData] = useState(null); // Store original API data for selected seller
+  const [tableHeaders, setTableHeaders] = useState([]); // Store headers from API
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [availableOptions, setAvailableOptions] = useState(availableCategories);
+  const [rawSheetData, setRawSheetData] = useState(null);
   const navigate = useNavigate();
+
+  // Fetch available sellers on component mount
+  useEffect(() => {
+    const loadAvailableSellers = async () => {
+      try {
+        const sheetData = await fetchSheetData();
+        setRawSheetData(sheetData.data);
+        
+        // Store headers from API
+        if (sheetData.headers && sheetData.headers.length > 0) {
+          setTableHeaders(sheetData.headers);
+        }
+        
+        // Extract unique categories from the actual sheet data
+        const uniqueCategories = [...new Set(sheetData.data.map(item => item.Category).filter(Boolean))];
+        const categoryOptions = [
+          { id: 'All Categories', name: 'All Categories' },
+          ...uniqueCategories.map(category => ({ id: category, name: category }))
+        ];
+        
+        setAvailableOptions(categoryOptions);
+      } catch (err) {
+        console.error('Failed to load sellers:', err);
+        // Use default categories if API fails
+        setAvailableOptions(availableCategories);
+      }
+    };
+    
+    loadAvailableSellers();
+  }, []);
 
   const handleSellerChange = async (sellerId) => {
     if (!sellerId) {
       setSelectedSeller('');
       setSellerData(null);
+      setRawFilteredData(null);
       setError(null);
       return;
     }
@@ -24,10 +59,22 @@ const DataSelectionPage = () => {
     setIsLoading(true);
     setError(null);
     setSellerData(null);
+    setRawFilteredData(null);
 
     try {
+      // Get the transformed data for display
       const data = await fetchSellerData(sellerId);
       setSellerData(data);
+      
+      // Also store the raw filtered data for download
+      const sheetData = await fetchSheetData();
+      let filteredRawData = sheetData.data;
+      if (sellerId && sellerId !== 'All Categories') {
+        filteredRawData = sheetData.data.filter(item => 
+          item.Category && item.Category.toLowerCase() === sellerId.toLowerCase()
+        );
+      }
+      setRawFilteredData(filteredRawData);
     } catch (err) {
       setError(err.message);
     } finally {
@@ -37,16 +84,24 @@ const DataSelectionPage = () => {
 
   const handleProcess = () => {
     if (selectedSeller) {
-      // navigate(`/setup/${selectedSeller}`);
+      navigate(`/setup/${selectedSeller}`);
     }
   };
 
   const handleDownload = () => {
-    // Mock download functionality
+    if (!rawFilteredData || rawFilteredData.length === 0) {
+      alert('No data available to download');
+      return;
+    }
+
+    // Use dynamic headers from API
+    const headers = tableHeaders.length > 0 ? tableHeaders : ['Category', 'Gender', 'Age Group', 'Subcategory', 'URL'];
+    
+    // Download the exact raw data retrieved from API
     const csvContent = [
-      'Product ID,Product Name,Price,Category,Rating,Reviews,Availability',
-      ...sellerData.map(item => 
-        `${item.productID},"${item.productName}",${item.price},${item.category},${item.rating},${item.reviews},${item.availability}`
+      headers.join(','),
+      ...rawFilteredData.map(item => 
+        headers.map(header => `"${item[header] || ''}"`).join(',')
       )
     ].join('\n');
     
@@ -54,7 +109,7 @@ const DataSelectionPage = () => {
     const url = window.URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `${selectedSeller}_product_data.csv`;
+    a.download = `${selectedSeller}_raw_data.csv`;
     a.click();
     window.URL.revokeObjectURL(url);
   };
@@ -86,9 +141,9 @@ const DataSelectionPage = () => {
                   disabled={isLoading}
                 >
                   <option value="">Choose a seller...</option>
-                  {availableSellerIds.map((seller) => (
+                  {availableOptions.map((seller) => (
                     <option key={seller.id} value={seller.id}>
-                      {seller.id} - {seller.name}
+                      {seller.name}
                     </option>
                   ))}
                 </select>
@@ -138,7 +193,7 @@ const DataSelectionPage = () => {
           )}
 
           {/* Data Loaded State */}
-          {sellerData && !isLoading && (
+          {rawFilteredData && !isLoading && (
             <div 
               className="bg-white rounded-lg shadow-sm border border-gray-200 opacity-0 translate-y-4 animate-fadeInUp"
               style={{
@@ -150,7 +205,7 @@ const DataSelectionPage = () => {
                   Product Data for {selectedSeller}
                 </h3>
                 <p className="text-gray-600 mt-1 text-sm">
-                  Found {sellerData.length} products
+                  Found {rawFilteredData.length} products
                 </p>
               </div>
 
@@ -159,52 +214,85 @@ const DataSelectionPage = () => {
                 <table className="w-full">
                   <thead className="bg-gray-50 sticky top-0">
                     <tr>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Product ID
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Product Name
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Price
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Category
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Rating
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Reviews
-                      </th>
+                      {tableHeaders.length > 0 ? (
+                        tableHeaders.map((header, index) => (
+                          <th key={index} className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            {header}
+                          </th>
+                        ))
+                      ) : (
+                        <>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Category
+                          </th>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Gender
+                          </th>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Age Group
+                          </th>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Subcategory
+                          </th>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            URL
+                          </th>
+                        </>
+                      )}
                     </tr>
                   </thead>
                   <tbody className="bg-white divide-y divide-gray-200">
-                    {sellerData.map((product, index) => (
-                      <tr key={product.productID} className="hover:bg-gray-50">
-                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-blue-600">
-                          {product.productID}
-                        </td>
-                        <td className="px-6 py-4 text-sm text-gray-900">
-                          <div className="max-w-xs truncate">
-                            {product.productName}
-                          </div>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                          ₹{product.price}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
-                          {product.category}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                          <div className="flex items-center">
-                            <span className="text-yellow-400">★</span>
-                            <span className="ml-1">{product.rating}</span>
-                          </div>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
-                          {product.reviews.toLocaleString()}
-                        </td>
+                    {rawFilteredData.map((item, index) => (
+                      <tr key={index} className="hover:bg-gray-50">
+                        {tableHeaders.length > 0 ? (
+                          tableHeaders.map((header, colIndex) => (
+                            <td key={colIndex} className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
+                              {header === 'URL' && item[header] ? (
+                                <a 
+                                  href={item[header]} 
+                                  target="_blank" 
+                                  rel="noopener noreferrer"
+                                  className="text-blue-600 hover:text-blue-800 underline truncate block max-w-xs"
+                                >
+                                  View Product
+                                </a>
+                              ) : (
+                                <span className={colIndex === 0 ? 'text-gray-900' : ''}>
+                                  {item[header] || '-'}
+                                </span>
+                              )}
+                            </td>
+                          ))
+                        ) : (
+                          <>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                              {item.Category || '-'}
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
+                              {item.Gender || '-'}
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
+                              {item['Age Group'] || '-'}
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
+                              {item.Subcategory || '-'}
+                            </td>
+                            <td className="px-6 py-4 text-sm text-gray-600">
+                              {item.URL ? (
+                                <a 
+                                  href={item.URL} 
+                                  target="_blank" 
+                                  rel="noopener noreferrer"
+                                  className="text-blue-600 hover:text-blue-800 underline truncate block max-w-xs"
+                                >
+                                  View Product
+                                </a>
+                              ) : (
+                                <span className="text-gray-400">No URL</span>
+                              )}
+                            </td>
+                          </>
+                        )}
                       </tr>
                     ))}
                   </tbody>
