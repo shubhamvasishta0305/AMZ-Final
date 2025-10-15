@@ -3,7 +3,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import GoldStandardPanel from '../components/GoldStandardPanel';
-import { goldStandardProduct } from '../data/mockData';
 import { fetchGoldenSheetData, scrapeProductFromUrl } from '../api/api';
 import { Edit3, Plus, ChevronDown, Link, Loader2, AlertCircle } from 'lucide-react';
 
@@ -153,51 +152,115 @@ const ComparisonSetupPage = () => {
       console.log('Applied Filters:', filters);
       console.log('========================');
 
-      // Scrape product data from the URL
-      console.log('🔄 Starting web scraping for URL:', productUrl);
-      const scrapedProduct = await scrapeProductFromUrl(productUrl);
+      let scrapedProduct = {};
       
-      console.log('✅ Scraped product data received:', scrapedProduct);
+      try {
+        // Scrape product data from the URL
+        console.log('🔄 Starting web scraping for URL:', productUrl);
+        scrapedProduct = await scrapeProductFromUrl(productUrl);
+        console.log('✅ Scraped product data received:', scrapedProduct);
+      } catch (scrapeErr) {
+        console.warn('⚠️ Scraping failed, using basic product data:', scrapeErr.message);
+        // Continue with empty scrapedProduct object - will use fallback values below
+      }
 
       // Create a product object combining scraped data with sheet data
       const goldStandard = {
-        id: scrapedProduct.asin || selectedProduct.productID || 'N/A',
-        title: scrapedProduct.title || selectedProduct.productName || `${selectedProduct.Category} - ${selectedProduct.Subcategory}`,
+        // Basic Info
+        id: scrapedProduct.asin || 'N/A',
+        asin: scrapedProduct.asin || 'N/A',
+        title: scrapedProduct.title || `${selectedProduct.Category} - ${selectedProduct.Subcategory}`,
+        brand: scrapedProduct.brand,
         amazonUrl: productUrl,
-        price: scrapedProduct.price || (selectedProduct.price ? `₹${selectedProduct.price}` : 'N/A'),
-        rating: scrapedProduct.rating || selectedProduct.rating || 4.0,
-        reviews: scrapedProduct.reviewCount || selectedProduct.reviews || 0,
-        category: selectedProduct.Category || selectedProduct.category,
-        gender: selectedProduct.Gender || selectedProduct.gender,
-        ageGroup: selectedProduct['Age Group'] || selectedProduct.ageGroup,
-        subcategory: selectedProduct.Subcategory || selectedProduct.subcategory,
-        // Use scraped images if available, otherwise fall back to default
-        images: scrapedProduct.images && scrapedProduct.images.length > 0 
-          ? scrapedProduct.images 
-          : goldStandardProduct.images,
-        details: {
-          category: selectedProduct.Category || 'N/A',
-          gender: selectedProduct.Gender || 'N/A',
-          ageGroup: selectedProduct['Age Group'] || 'N/A',
-          subcategory: selectedProduct.Subcategory || 'N/A',
-          asin: scrapedProduct.asin || 'N/A',
-          availability: scrapedProduct.availability || 'N/A'
-        },
-        // Use scraped features if available
-        keyFeatures: scrapedProduct.features && scrapedProduct.features.length > 0
-          ? scrapedProduct.features
-          : goldStandardProduct.keyFeatures,
-        description: scrapedProduct.description || goldStandardProduct.description,
-        // Store the scraped data for reference
+        
+        // Sheet metadata
+        category: selectedProduct.Category,
+        gender: selectedProduct.Gender,
+        ageGroup: selectedProduct['Age Group'],
+        subcategory: selectedProduct.Subcategory,
+        
+        // Images from scraped data
+        images: scrapedProduct.images || [],
+        
+        // Features/Bullets
+        features: scrapedProduct.features || [],
+        
+        // Description
+        description: scrapedProduct.description,
+        
+        // Detailed sections
+        productDetails: scrapedProduct.productDetails,
+        productDetailsArray: scrapedProduct.productDetailsArray || [],
+        
+        manufacturingDetails: scrapedProduct.manufacturingDetails,
+        manufacturingDetailsArray: scrapedProduct.manufacturingDetailsArray || [],
+        
+        additionalInfo: scrapedProduct.additionalInfo,
+        additionalInfoArray: scrapedProduct.additionalInfoArray || [],
+        
+        // Store the full scraped data
         scrapedData: scrapedProduct
       };
 
       console.log('📦 Final gold standard product:', goldStandard);
       setLoadedProduct(goldStandard);
 
+      // Store filter values in localStorage for use in image generation
+      const selectedFilters = {};
+      filterColumns.forEach(column => {
+        const filterValue = filters[column];
+        if (filterValue && !filterValue.startsWith('Select ')) {
+          selectedFilters[column] = filterValue;
+        }
+      });
+      localStorage.setItem('productFilters', JSON.stringify(selectedFilters));
+      console.log('💾 Stored filters in localStorage:', selectedFilters);
+
     } catch (err) {
-      console.error('❌ Error loading/scraping product:', err);
-      setError(err.message || 'Failed to load and scrape product data');
+      console.error('❌ Error loading product:', err);
+      // Even on error, show a basic product layout instead of error message
+      if (filteredProducts.length > 0) {
+        const selectedProduct = filteredProducts[0];
+        const productUrl = selectedProduct.URL || selectedProduct.url;
+        
+        const basicProduct = {
+          id: 'N/A',
+          asin: 'N/A',
+          title: `${selectedProduct.Category} - ${selectedProduct.Subcategory}`,
+          brand: null,
+          amazonUrl: productUrl || '#',
+          category: selectedProduct.Category,
+          gender: selectedProduct.Gender,
+          ageGroup: selectedProduct['Age Group'],
+          subcategory: selectedProduct.Subcategory,
+          images: [],
+          features: [],
+          description: null,
+          productDetails: null,
+          productDetailsArray: [],
+          manufacturingDetails: null,
+          manufacturingDetailsArray: [],
+          additionalInfo: null,
+          additionalInfoArray: [],
+          scrapedData: null
+        };
+        
+        console.log('📦 Using basic product layout (scraping failed):', basicProduct);
+        setLoadedProduct(basicProduct);
+
+        // Store filter values in localStorage even when scraping fails
+        const selectedFilters = {};
+        filterColumns.forEach(column => {
+          const filterValue = filters[column];
+          if (filterValue && !filterValue.startsWith('Select ')) {
+            selectedFilters[column] = filterValue;
+          }
+        });
+        localStorage.setItem('productFilters', JSON.stringify(selectedFilters));
+        console.log('💾 Stored filters in localStorage:', selectedFilters);
+      } else {
+        setError(err.message || 'Failed to load product data');
+      }
     } finally {
       setIsLoading(false);
     }
@@ -287,7 +350,7 @@ const ComparisonSetupPage = () => {
                 ) : (
                   <>
                     <Link className="h-4 w-4" />
-                    <span>Load & Scrape Product</span>
+                    <span>Load Url</span>
                   </>
                 )}
               </button>
@@ -310,6 +373,8 @@ const ComparisonSetupPage = () => {
             )} */}
           </div>
         </div>
+
+     
 
         {/* Main Content - Gold Standard Panel (Full Width) - Only show when product is loaded */}
         {loadedProduct && (

@@ -1,12 +1,28 @@
 // Page 5: Image Comparison and AI Generation Page
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { generateAIImage } from '../api/api';
 import { Wand2, Loader2, Save, X, Upload, Download, Link } from 'lucide-react';
 
 const ImageComparisonPage = () => {
   const [previewImage, setPreviewImage] = useState(null);
   const [referenceImage, setReferenceImage] = useState(null);
+  const [referenceFile, setReferenceFile] = useState(null);
+  const [productAttributes, setProductAttributes] = useState({});
+
+  // Load product attributes from localStorage on component mount
+  useEffect(() => {
+    const storedFilters = localStorage.getItem('productFilters');
+    if (storedFilters) {
+      try {
+        const filters = JSON.parse(storedFilters);
+        setProductAttributes(filters);
+        console.log('✅ Loaded product attributes from localStorage:', filters);
+      } catch (error) {
+        console.error('Error parsing stored filters:', error);
+      }
+    }
+  }, []);
 
   // Real kurti images for gold standard
   const [goldStandardImages] = useState([
@@ -45,7 +61,37 @@ const ImageComparisonPage = () => {
   ];
 
   const handleGenerateImage = async (index) => {
+    if (!referenceFile) {
+      alert('Please upload a reference image first!');
+      return;
+    }
+
+    // Check if style index is not yet implemented on backend (indices 5 and 6)
+    if (index >= 5) {
+      alert('🚧 This image style is coming soon! Currently in development. Stay tuned! 🎨');
+      return;
+    }
+
     const imageType = imageLabels[index];
+    // Use index as style_index (0-6 for the 7 image slots)
+    const styleIndex = index;
+    
+    // Normalize attribute keys to match prompt template placeholders
+    // Convert filter keys like "Subcategory" -> "SubCategory", "Age Group" -> "AgeGroup"
+    const normalizedAttributes = {};
+    Object.entries(productAttributes).forEach(([key, value]) => {
+      // Handle specific key mappings
+      if (key === 'Subcategory') {
+        normalizedAttributes['SubCategory'] = value;
+      } else if (key === 'Age Group') {
+        normalizedAttributes['AgeGroup'] = value;
+      } else {
+        // Keep other keys as-is (Gender, Category, etc.)
+        normalizedAttributes[key] = value;
+      }
+    });
+    
+    console.log('🎨 Generating image with attributes:', normalizedAttributes);
     
     setGeneratedImages(prev => 
       prev.map((img, i) => 
@@ -54,8 +100,8 @@ const ImageComparisonPage = () => {
     );
 
     try {
-      // Pass reference image if available
-      const newImageUrl = await generateAIImage(imageType, referenceImage);
+      // Call the real API with reference image file, style index, and attributes
+      const newImageUrl = await generateAIImage(referenceFile, styleIndex, normalizedAttributes);
       setGeneratedImages(prev => 
         prev.map((img, i) => 
           i === index ? { url: newImageUrl, isLoading: false } : img
@@ -63,6 +109,18 @@ const ImageComparisonPage = () => {
       );
     } catch (error) {
       console.error('Error generating image:', error);
+      
+      // Provide more helpful error messages
+      let errorMessage = error.message;
+      if (errorMessage.includes('No image returned from model')) {
+        errorMessage = 'The AI model could not generate this image. This might be due to content safety filters or prompt issues. Please try a different style or image.';
+      } else if (errorMessage.includes('style_index out of range')) {
+        errorMessage = 'This image style is not yet available. Please try another style.';
+      } else if (errorMessage.includes('safety filters')) {
+        errorMessage = 'Content generation was blocked by safety filters. Please try a different reference image or style.';
+      }
+      
+      alert(`Failed to generate image: ${errorMessage}`);
       setGeneratedImages(prev => 
         prev.map((img, i) => 
           i === index ? { ...img, isLoading: false } : img
@@ -74,6 +132,7 @@ const ImageComparisonPage = () => {
   const handleReferenceImageUpload = (event) => {
     const file = event.target.files[0];
     if (file && file.type.startsWith('image/')) {
+      setReferenceFile(file);
       const reader = new FileReader();
       reader.onload = (e) => {
         setReferenceImage(e.target.result);
@@ -84,20 +143,20 @@ const ImageComparisonPage = () => {
 
   const handleRemoveReferenceImage = () => {
     setReferenceImage(null);
+    setReferenceFile(null);
   };
 
-  const handleDownloadImage = async (imageUrl, imageName) => {
+  const handleDownloadImage = (imageUrl, imageName) => {
     try {
-      const response = await fetch(imageUrl);
-      const blob = await response.blob();
-      const url = window.URL.createObjectURL(blob);
+      // Create a temporary link element and trigger download
       const link = document.createElement('a');
-      link.href = url;
-      link.download = `${imageName}.jpg`;
+      link.href = imageUrl;
+      link.download = `${imageName.replace(/\s+/g, '_')}.png`;
+      link.target = '_blank';
+      link.rel = 'noopener noreferrer';
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
-      window.URL.revokeObjectURL(url);
     } catch (error) {
       console.error('Error downloading image:', error);
       alert('Failed to download image. Please try again.');
@@ -141,7 +200,7 @@ const ImageComparisonPage = () => {
             <img
               src={src}
               alt={alt}
-              className="w-full h-full object-cover cursor-pointer hover:opacity-90 transition-opacity"
+              className="w-full h-full object-contain cursor-pointer hover:opacity-90 transition-opacity"
               onClick={() => setPreviewImage({ src, alt, label })}
               onError={(e) => {
                 e.target.src = `https://placehold.co/250x250/E5E7EB/6B7280?text=${encodeURIComponent(alt)}`;
@@ -232,6 +291,16 @@ const ImageComparisonPage = () => {
           <p className="text-sm text-gray-600">
             Compare your current images against the Gold Standard and generate new AI-powered alternatives for each slot.
           </p>
+          {Object.keys(productAttributes).length > 0 && (
+            <div className="mt-2 inline-flex items-center space-x-2 bg-blue-50 border border-blue-200 px-3 py-1 rounded-full text-xs">
+              <span className="font-medium text-blue-900">Using attributes:</span>
+              {Object.entries(productAttributes).map(([key, value]) => (
+                <span key={key} className="bg-blue-100 text-blue-700 px-2 py-0.5 rounded">
+                  {key}: {value}
+                </span>
+              ))}
+            </div>
+          )}
         </div>
 
         {/* Reference Image Upload Section */}

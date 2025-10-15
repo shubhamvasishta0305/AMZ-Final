@@ -1,7 +1,7 @@
 // Page 4b: New Product Creation Page with Form and Gold Standard Reference
 
 import { useState } from 'react';
-import { Star, Save, Wand2, Plus, Check } from 'lucide-react';
+import { Star, Save, Plus, Check } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { goldStandardProduct } from '../data/mockData.js';
 
@@ -100,8 +100,8 @@ const NewProductCreationPage = () => {
             <h3 className="text-lg font-semibold text-gray-700 mb-4">Product Title</h3>
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               {/* Left: Gold Standard Product Title */}
-              <div className="bg-gradient-to-r from-yellow-50 to-amber-50 border border-yellow-300 rounded-lg p-4">
-                <div className="bg-white/60 rounded-md p-3 border border-yellow-200">
+              <div className="bg-gradient-to-r from-yellow-50 to-amber-50 border border-yellow-300 rounded-lg p-4 h-full flex items-center">
+                <div className="bg-white/60 rounded-md p-3 border border-yellow-200 w-full">
                   <p className="text-gray-800 text-sm leading-relaxed">
                     {goldStandardProduct.title}
                   </p>
@@ -109,7 +109,7 @@ const NewProductCreationPage = () => {
               </div>
 
               {/* Right: Your Product Title Input */}
-              <div>
+              <div className="h-full flex items-center">
                 <textarea
                   className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 resize-none"
                   value={productTitle}
@@ -117,13 +117,6 @@ const NewProductCreationPage = () => {
                   rows={3}
                   placeholder="Enter your product title..."
                 />
-                <button
-                  className="flex items-center space-x-1 px-3 py-1.5 bg-purple-600 text-white rounded-md hover:bg-purple-700 transition-colors text-sm mt-2"
-                  onClick={() => setProductTitle(`AI Generated: ${goldStandardProduct.title}`)}
-                >
-                  <Wand2 className="h-4 w-4" />
-                  <span>AI Generate</span>
-                </button>
               </div>
             </div>
           </div>
@@ -133,8 +126,8 @@ const NewProductCreationPage = () => {
             <h3 className="text-lg font-semibold text-gray-700 mb-4">Product Description</h3>
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               {/* Left: Gold Standard Description */}
-              <div className="bg-gradient-to-r from-yellow-50 to-amber-50 border border-yellow-300 rounded-lg p-4">
-                <div className="bg-white/60 rounded-md p-3 border border-yellow-200">
+              <div className="bg-gradient-to-r from-yellow-50 to-amber-50 border border-yellow-300 rounded-lg p-4 h-full flex items-center">
+                <div className="bg-white/60 rounded-md p-3 border border-yellow-200 w-full">
                   <p className="text-gray-800 text-sm leading-relaxed">
                     {goldStandardProduct.description}
                   </p>
@@ -142,7 +135,7 @@ const NewProductCreationPage = () => {
               </div>
 
               {/* Right: Your Product Description Input */}
-              <div>
+              <div className="h-full flex items-center">
                 <textarea
                   className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 resize-none"
                   value={productDescription}
@@ -150,13 +143,6 @@ const NewProductCreationPage = () => {
                   rows={4}
                   placeholder="Enter your product description..."
                 />
-                <button
-                  className="flex items-center space-x-1 px-3 py-1.5 bg-purple-600 text-white rounded-md hover:bg-purple-700 transition-colors text-sm mt-2"
-                  onClick={() => setProductDescription(`AI Generated: ${goldStandardProduct.description}`)}
-                >
-                  <Wand2 className="h-4 w-4" />
-                  <span>AI Generate</span>
-                </button>
               </div>
             </div>
           </div>

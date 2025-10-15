@@ -4,6 +4,7 @@ import React, { useState, useRef, useLayoutEffect } from 'react';
 import { Wand2, Check, Edit2, Eye, ExternalLink, Star, Save, Plus } from 'lucide-react';
 import { goldStandardProduct } from '../data/mockData.js';
 import { useNavigate } from 'react-router-dom';
+import { generateProductTitle, generateProductDescription } from '../api/api.js';
 
 // Component for editable attributes (not features - for product details like brand, fabric, etc.)
 function AttributeEditableCell({ attributeKey, initialValue, onAccept, isAccepted }) {
@@ -101,19 +102,23 @@ const ProductComparator = () => {
 
   // Product Attributes State (details like brand, fabric, etc.)
   const [productAttributes, setProductAttributes] = useState([
-    { id: 1, key: 'Brand', value: 'BIBA', accepted: false },
+    { id: 1, key: 'Brand', value: 'Adidas', accepted: false },
     { id: 2, key: 'Fabric', value: '100% Cotton', accepted: false },
-    { id: 3, key: 'Sleeves', value: 'Short Sleeves', accepted: false },
-    { id: 4, key: 'Fit', value: 'Straight', accepted: false },
-    { id: 5, key: 'Occasion', value: 'Casual, Festive', accepted: false },
-    { id: 6, key: 'Neck Type', value: 'Round Neck', accepted: false },
+    { id: 3, key: 'Sleeves', value: 'Full Sleeves', accepted: false },
+    { id: 4, key: 'Fit', value: 'Regular', accepted: false },
+    { id: 5, key: 'Occasion', value: 'Diwali', accepted: false },
+    { id: 6, key: 'Neck Type', value: 'Full Neck', accepted: false },
     { id: 7, key: 'Pattern', value: 'Solid', accepted: false },
-    { id: 8, key: 'Color', value: 'Blue', accepted: false }
+    { id: 8, key: 'Color', value: 'Red', accepted: false }
   ]);
 
   const [showAddAttribute, setShowAddAttribute] = useState(false);
   const [newAttributeKey, setNewAttributeKey] = useState('');
   const [newAttributeValue, setNewAttributeValue] = useState('');
+
+  // Loading states for AI generation
+  const [isGeneratingTitle, setIsGeneratingTitle] = useState(false);
+  const [isGeneratingDescription, setIsGeneratingDescription] = useState(false);
 
   // Check if all attributes are accepted
   const allAttributesAccepted = productAttributes.every(attr => attr.accepted);
@@ -143,9 +148,25 @@ const ProductComparator = () => {
     setIsEditingTitle(false);
   };
 
-  const handleAIGenerateTitle = () => {
-    setProductTitle(`AI Enhanced: ${originalTitle}`);
-    setIsEditingTitle(true);
+  const handleAIGenerateTitle = async () => {
+    setIsGeneratingTitle(true);
+    try {
+      // Prepare subcategory and product details from attributes
+      const subcategory = 'Kurta Set'; // You can make this dynamic based on your product
+      const productDetails = productAttributes.reduce((acc, attr) => {
+        acc[attr.key] = attr.value;
+        return acc;
+      }, {});
+
+      const generatedTitle = await generateProductTitle(subcategory, productDetails);
+      setProductTitle(generatedTitle);
+      setIsEditingTitle(true);
+    } catch (error) {
+      console.error('Error generating title:', error);
+      alert(`Failed to generate title: ${error.message}`);
+    } finally {
+      setIsGeneratingTitle(false);
+    }
   };
 
   // Description Handlers
@@ -159,9 +180,25 @@ const ProductComparator = () => {
     setIsEditingDescription(false);
   };
 
-  const handleAIGenerateDescription = () => {
-    setProductDescription(`AI Enhanced: ${originalDescription}`);
-    setIsEditingDescription(true);
+  const handleAIGenerateDescription = async () => {
+    setIsGeneratingDescription(true);
+    try {
+      // Prepare subcategory and product details from attributes
+      const subcategory = 'Kurta Set'; // You can make this dynamic based on your product
+      const productDetails = productAttributes.reduce((acc, attr) => {
+        acc[attr.key] = attr.value;
+        return acc;
+      }, {});
+
+      const generatedDescription = await generateProductDescription(subcategory, productDetails);
+      setProductDescription(generatedDescription);
+      setIsEditingDescription(true);
+    } catch (error) {
+      console.error('Error generating description:', error);
+      alert(`Failed to generate description: ${error.message}`);
+    } finally {
+      setIsGeneratingDescription(false);
+    }
   };
 
   // Attribute Handlers
@@ -297,17 +334,21 @@ const ProductComparator = () => {
                     <div className="flex flex-wrap gap-2">
                       <button
                         className="flex items-center space-x-1 px-3 py-1.5 bg-white border border-gray-300 rounded-md hover:bg-gray-100 transition-colors text-sm"
-                        onClick={() => setProductTitle(originalTitle)}
+                        onClick={() => {
+                          setProductTitle(originalTitle);
+                          setIsEditingTitle(true);
+                        }}
                       >
                         <Eye className="h-4 w-4" />
                         <span>View Original</span>
                       </button>
                       <button
-                        className="flex items-center space-x-1 px-3 py-1.5 bg-purple-600 text-white rounded-md hover:bg-purple-700 transition-colors text-sm"
+                        className="flex items-center space-x-1 px-3 py-1.5 bg-purple-600 text-white rounded-md hover:bg-purple-700 transition-colors text-sm disabled:opacity-50 disabled:cursor-not-allowed"
                         onClick={handleAIGenerateTitle}
+                        disabled={isGeneratingTitle}
                       >
-                        <Wand2 className="h-4 w-4" />
-                        <span>AI Generate</span>
+                        <Wand2 className={`h-4 w-4 ${isGeneratingTitle ? 'animate-spin' : ''}`} />
+                        <span>{isGeneratingTitle ? 'Generating...' : 'AI Generate'}</span>
                       </button>
                       <button
                         className="flex items-center space-x-1 px-3 py-1.5 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors text-sm"
@@ -371,17 +412,21 @@ const ProductComparator = () => {
                     <div className="flex flex-wrap gap-2">
                       <button
                         className="flex items-center space-x-1 px-3 py-1.5 bg-white border border-gray-300 rounded-md hover:bg-gray-100 transition-colors text-sm"
-                        onClick={() => setProductDescription(originalDescription)}
+                        onClick={() => {
+                          setProductDescription(originalDescription);
+                          setIsEditingDescription(true);
+                        }}
                       >
                         <Eye className="h-4 w-4" />
                         <span>View Original</span>
                       </button>
                       <button
-                        className="flex items-center space-x-1 px-3 py-1.5 bg-purple-600 text-white rounded-md hover:bg-purple-700 transition-colors text-sm"
+                        className="flex items-center space-x-1 px-3 py-1.5 bg-purple-600 text-white rounded-md hover:bg-purple-700 transition-colors text-sm disabled:opacity-50 disabled:cursor-not-allowed"
                         onClick={handleAIGenerateDescription}
+                        disabled={isGeneratingDescription}
                       >
-                        <Wand2 className="h-4 w-4" />
-                        <span>AI Generate</span>
+                        <Wand2 className={`h-4 w-4 ${isGeneratingDescription ? 'animate-spin' : ''}`} />
+                        <span>{isGeneratingDescription ? 'Generating...' : 'AI Generate'}</span>
                       </button>
                       <button
                         className="flex items-center space-x-1 px-3 py-1.5 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors text-sm"
