@@ -1,9 +1,12 @@
+// Page 5: Image Comparison and AI Generation Page
+
 import { useState } from 'react';
-import { generateAIImage } from '../api/mockApi';
-import { Wand2, Loader2, Save, X } from 'lucide-react';
+import { generateAIImage } from '../api/api';
+import { Wand2, Loader2, Save, X, Upload, Download, Link } from 'lucide-react';
 
 const ImageComparisonPage = () => {
   const [previewImage, setPreviewImage] = useState(null);
+  const [referenceImage, setReferenceImage] = useState(null);
 
   // Real kurti images for gold standard
   const [goldStandardImages] = useState([
@@ -51,7 +54,8 @@ const ImageComparisonPage = () => {
     );
 
     try {
-      const newImageUrl = await generateAIImage(imageType);
+      // Pass reference image if available
+      const newImageUrl = await generateAIImage(imageType, referenceImage);
       setGeneratedImages(prev => 
         prev.map((img, i) => 
           i === index ? { url: newImageUrl, isLoading: false } : img
@@ -65,6 +69,48 @@ const ImageComparisonPage = () => {
         )
       );
     }
+  };
+
+  const handleReferenceImageUpload = (event) => {
+    const file = event.target.files[0];
+    if (file && file.type.startsWith('image/')) {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        setReferenceImage(e.target.result);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleRemoveReferenceImage = () => {
+    setReferenceImage(null);
+  };
+
+  const handleDownloadImage = async (imageUrl, imageName) => {
+    try {
+      const response = await fetch(imageUrl);
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `${imageName}.jpg`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error('Error downloading image:', error);
+      alert('Failed to download image. Please try again.');
+    }
+  };
+
+  const handleCopyImageLink = (imageUrl) => {
+    navigator.clipboard.writeText(imageUrl).then(() => {
+      alert('Image link copied to clipboard!');
+    }).catch(err => {
+      console.error('Failed to copy link:', err);
+      alert('Failed to copy link. Please try again.');
+    });
   };
 
   const handleSaveChanges = () => {
@@ -102,15 +148,38 @@ const ImageComparisonPage = () => {
               }}
             />
             {type === 'generate' && (
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onGenerate(index);
-                }}
-                className="absolute bottom-1 right-1 bg-blue-600 text-white px-2 py-1 rounded text-xs hover:bg-blue-700 transition-colors z-10"
-              >
-                Regenerate
-              </button>
+              <div className="absolute bottom-1 left-1 right-1 flex gap-1">
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onGenerate(index);
+                  }}
+                  className="flex-1 bg-blue-600 text-white px-2 py-1 rounded text-xs hover:bg-blue-700 transition-colors z-10"
+                  title="Regenerate Image"
+                >
+                  Regenerate
+                </button>
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleDownloadImage(src, label);
+                  }}
+                  className="bg-green-600 text-white p-1 rounded text-xs hover:bg-green-700 transition-colors z-10"
+                  title="Download Image"
+                >
+                  <Download className="h-3 w-3" />
+                </button>
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleCopyImageLink(src);
+                  }}
+                  className="bg-purple-600 text-white p-1 rounded text-xs hover:bg-purple-700 transition-colors z-10"
+                  title="Copy Image Link"
+                >
+                  <Link className="h-3 w-3" />
+                </button>
+              </div>
             )}
           </>
         )}
@@ -163,6 +232,56 @@ const ImageComparisonPage = () => {
           <p className="text-sm text-gray-600">
             Compare your current images against the Gold Standard and generate new AI-powered alternatives for each slot.
           </p>
+        </div>
+
+        {/* Reference Image Upload Section */}
+        <div className="bg-gradient-to-r from-purple-50 to-blue-50 rounded-lg shadow-md border-2 border-purple-300 p-4 mb-4">
+          <div className="flex items-center justify-between">
+            <div className="flex-1">
+              <h3 className="text-base font-bold text-gray-900 mb-1">Reference Image for AI Generation</h3>
+              <p className="text-xs text-gray-600">Upload a reference image to guide the AI generation process</p>
+            </div>
+            
+            {!referenceImage ? (
+              <label className="flex items-center space-x-2 px-4 py-2 bg-purple-600 text-white rounded-md hover:bg-purple-700 cursor-pointer transition-colors text-sm">
+                <Upload className="h-4 w-4" />
+                <span>Upload Reference</span>
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={handleReferenceImageUpload}
+                  className="hidden"
+                />
+              </label>
+            ) : (
+              <div className="flex items-center space-x-3">
+                <div className="relative">
+                  <img
+                    src={referenceImage}
+                    alt="Reference"
+                    className="w-20 h-20 object-cover rounded-lg border-2 border-purple-400 cursor-pointer hover:opacity-80 transition-opacity"
+                    onClick={() => setPreviewImage({ src: referenceImage, alt: 'Reference Image', label: 'Reference Image' })}
+                  />
+                  <button
+                    onClick={handleRemoveReferenceImage}
+                    className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 hover:bg-red-600 transition-colors"
+                  >
+                    <X className="h-3 w-3" />
+                  </button>
+                </div>
+                <label className="flex items-center space-x-2 px-4 py-2 bg-purple-600 text-white rounded-md hover:bg-purple-700 cursor-pointer transition-colors text-sm">
+                  <Upload className="h-4 w-4" />
+                  <span>Change</span>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={handleReferenceImageUpload}
+                    className="hidden"
+                  />
+                </label>
+              </div>
+            )}
+          </div>
         </div>
 
         {/* Three Column Layout with Overall Border */}

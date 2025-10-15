@@ -1,7 +1,8 @@
+// Page 2: Seller List and Data Selection Page
+
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { fetchSheetData, fetchSellerData } from '../api/mockApi';
-import { availableCategories, getAvailableCategoriesFromData } from '../data/mockData';
+import { fetchSheetData, fetchSellerData } from '../api/api';
 import { ChevronDown, Download, ArrowRight, Loader2 } from 'lucide-react';
 
 const DataSelectionPage = () => {
@@ -12,7 +13,7 @@ const DataSelectionPage = () => {
   const [tableHeaders, setTableHeaders] = useState([]); // Store headers from API
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
-  const [availableOptions, setAvailableOptions] = useState(availableCategories);
+  const [availableOptions, setAvailableOptions] = useState([]);
   const [rawSheetData, setRawSheetData] = useState(null);
   const navigate = useNavigate();
 
@@ -28,18 +29,17 @@ const DataSelectionPage = () => {
           setTableHeaders(sheetData.headers);
         }
         
-        // Extract unique categories from the actual sheet data
-        const uniqueCategories = [...new Set(sheetData.data.map(item => item.Category).filter(Boolean))];
-        const categoryOptions = [
-          { id: 'All Categories', name: 'All Categories' },
-          ...uniqueCategories.map(category => ({ id: category, name: category }))
-        ];
+        // Extract unique seller IDs from the actual sheet data
+        const uniqueSellerIds = [...new Set(sheetData.data.map(item => item.seller_id || item.Seller_ID || item['Seller ID']).filter(Boolean))];
+        const sellerOptions = uniqueSellerIds.map(sellerId => ({ 
+          id: sellerId, 
+          name: sellerId 
+        }));
         
-        setAvailableOptions(categoryOptions);
+        setAvailableOptions(sellerOptions);
       } catch (err) {
         console.error('Failed to load sellers:', err);
-        // Use default categories if API fails
-        setAvailableOptions(availableCategories);
+        setAvailableOptions([]);
       }
     };
     
@@ -62,18 +62,13 @@ const DataSelectionPage = () => {
     setRawFilteredData(null);
 
     try {
-      // Get the transformed data for display
-      const data = await fetchSellerData(sellerId);
-      setSellerData(data);
-      
-      // Also store the raw filtered data for download
+      // Filter the raw sheet data by seller_id
       const sheetData = await fetchSheetData();
-      let filteredRawData = sheetData.data;
-      if (sellerId && sellerId !== 'All Categories') {
-        filteredRawData = sheetData.data.filter(item => 
-          item.Category && item.Category.toLowerCase() === sellerId.toLowerCase()
-        );
-      }
+      const filteredRawData = sheetData.data.filter(item => {
+        const itemSellerId = item.seller_id || item.Seller_ID || item['Seller ID'];
+        return itemSellerId === sellerId;
+      });
+      
       setRawFilteredData(filteredRawData);
     } catch (err) {
       setError(err.message);

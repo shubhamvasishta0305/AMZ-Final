@@ -1,3 +1,5 @@
+// Page 1: Login Page with Google Sign-In
+
 import { useNavigate } from "react-router-dom";
 
 const LoginPage = () => {

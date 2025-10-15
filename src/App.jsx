@@ -22,7 +22,7 @@ function AppContent() {
          <Route path="/setup/:sellerId" element={<ComparisonSetupPage />} />
         <Route path="/edit-product/:productId" element={<ProductComparator />} />
         <Route path="/new-product" element={<NewProductCreationPage />} />
-        <Route path="/compare-images/:productId" element={<ImageComparisonPage />} /> 
+        <Route path="/compare-images" element={<ImageComparisonPage />} /> 
       </Routes>
     </div>
   );

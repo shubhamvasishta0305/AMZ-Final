@@ -2,18 +2,22 @@ import { useState, useEffect } from 'react';
 import { goldStandardProduct } from '../data/mockData';
 import { Star, ExternalLink, AlertTriangle } from 'lucide-react';
 
-const GoldStandardPanel = () => {
+const GoldStandardPanel = ({ product = {} }) => {
   const [iframeError, setIframeError] = useState(false);
   const [showFallback, setShowFallback] = useState(false);
 
   useEffect(() => {
+    // Reset error states when product changes
+    setIframeError(false);
+    setShowFallback(false);
+    
     // Set a timeout to show fallback if iframe doesn't load
     const timer = setTimeout(() => {
       setShowFallback(true);
     }, 3000);
 
     return () => clearTimeout(timer);
-  }, []);
+  }, [product]);
 
   const handleIframeError = () => {
     setIframeError(true);
@@ -44,7 +48,7 @@ const GoldStandardPanel = () => {
           <div className="flex items-center justify-between">
             <h3 className="text-lg font-semibold text-gray-900">Gold Standard Product</h3>
             <a
-              href={goldStandardProduct.amazonUrl}
+              href={product.amazonUrl}
               target="_blank"
               rel="noopener noreferrer"
               className="flex items-center space-x-1 text-blue-600 hover:text-blue-700 text-sm"
@@ -67,47 +71,51 @@ const GoldStandardPanel = () => {
           {/* Product Info */}
           <div className="space-y-3">
             <h4 className="text-lg font-medium text-gray-900 leading-tight">
-              {goldStandardProduct.title}
+              {product.title}
             </h4>
 
             <div className="flex items-center space-x-2">
               <div className="flex items-center space-x-1">
-                {renderStars(goldStandardProduct.rating)}
+                {renderStars(product.rating)}
               </div>
               <span className="text-sm text-gray-600">
-                {goldStandardProduct.rating} ({goldStandardProduct.reviews.toLocaleString()} reviews)
+                {product.rating} ({(product.reviews || 0).toLocaleString()} reviews)
               </span>
             </div>
 
             <div className="text-2xl font-bold text-red-600">
-              {goldStandardProduct.price}
+              {product.price}
             </div>
 
             {/* Key Features */}
-            <div className="space-y-2">
-              <h5 className="font-medium text-gray-900 text-sm">Key Features:</h5>
-              <ul className="space-y-1">
-                {goldStandardProduct.keyFeatures.slice(0, 4).map((feature, index) => (
-                  <li key={index} className="text-sm text-gray-700 flex items-start">
-                    <span className="text-green-600 mr-2">•</span>
-                    {feature}
-                  </li>
-                ))}
-              </ul>
-            </div>
+            {product.keyFeatures && product.keyFeatures.length > 0 && (
+              <div className="space-y-2">
+                <h5 className="font-medium text-gray-900 text-sm">Key Features:</h5>
+                <ul className="space-y-1">
+                  {product.keyFeatures.slice(0, 4).map((feature, index) => (
+                    <li key={index} className="text-sm text-gray-700 flex items-start">
+                      <span className="text-green-600 mr-2">•</span>
+                      {feature}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
 
             {/* Product Details */}
-            <div className="space-y-2">
-              <h5 className="font-medium text-gray-900 text-sm">Product Details:</h5>
-              <div className="grid grid-cols-1 gap-1 text-sm">
-                {Object.entries(goldStandardProduct.details).slice(0, 4).map(([key, value]) => (
-                  <div key={key} className="flex justify-between">
-                    <span className="text-gray-600 capitalize">{key}:</span>
-                    <span className="text-gray-900 font-medium">{value}</span>
-                  </div>
-                ))}
+            {product.details && (
+              <div className="space-y-2">
+                <h5 className="font-medium text-gray-900 text-sm">Product Details:</h5>
+                <div className="grid grid-cols-1 gap-1 text-sm">
+                  {Object.entries(product.details).slice(0, 6).map(([key, value]) => (
+                    <div key={key} className="flex justify-between">
+                      <span className="text-gray-600 capitalize">{key}:</span>
+                      <span className="text-gray-900 font-medium">{value}</span>
+                    </div>
+                  ))}
+                </div>
               </div>
-            </div>
+            )}
 
           </div>
         </div>
@@ -121,7 +129,7 @@ const GoldStandardPanel = () => {
         <div className="flex items-center justify-between">
           <h3 className="text-lg font-semibold text-gray-900">Gold Standard Product</h3>
           <a
-            href={goldStandardProduct.amazonUrl}
+            href={product.amazonUrl}
             target="_blank"
             rel="noopener noreferrer"
             className="flex items-center space-x-1 text-blue-600 hover:text-blue-700 text-sm"
@@ -134,7 +142,7 @@ const GoldStandardPanel = () => {
 
       <div className="p-2" style={{ height: 'calc(100% - 80px)' }}>
         <iframe
-          src={goldStandardProduct.amazonUrl}
+          src={product.amazonUrl}
           className="w-full h-full border-0 rounded"
           onError={handleIframeError}
           onLoad={(e) => {
