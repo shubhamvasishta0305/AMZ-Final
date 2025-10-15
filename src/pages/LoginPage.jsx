@@ -1,6 +1,5 @@
-// Page 1: Login Page with Google Sign-In
-
 import { useNavigate } from "react-router-dom";
+import { GoogleLogin } from "@react-oauth/google"
 
 const LoginPage = () => {
 
@@ -20,11 +19,26 @@ const LoginPage = () => {
                             <p className="text-gray-600 mt-2">Please sign in to continue.</p>
                         </div>
                     </div>
-                    <button className="w-full flex items-center justify-center bg-white border border-gray-300 
+                    {/* <button className="w-full flex items-center justify-center bg-white border border-gray-300 
                     rounded-xl shadow-sm py-3 hover:shadow-md transition-shadow duration-200" onClick={() => navigate('/seller-list')}>
                         <img className="pr-5" src="/src/assets/Google_logo.png" alt="Logo"/>
                         <span className="text-gray-700 text-lg font-medium">Sign in with Google</span>
-                    </button>
+                    </button> */}
+                    <div className="flex justify-center items-center">
+                        <GoogleLogin
+                            
+                            onSuccess={credentialResponse => {
+                                console.log(credentialResponse);
+                                navigate('/seller-list');
+                            }}
+
+                            onError={() => {
+                                console.log('Login Failed');
+                            }}
+                            logo_alignment="left"
+                            useOneTap
+                        />
+                    </div>
                     <p className="text-center text-blue-500 text-sm mt-5">Only Vaco Binary emails can login</p>
                 </div>
             </div>

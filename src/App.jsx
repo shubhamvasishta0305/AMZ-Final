@@ -8,6 +8,8 @@ import ComparisonSetupPage from './pages/ComparisonSetupPage';
 import NewProductCreationPage from './pages/NewProductCreationPage';
 import ImageComparisonPage from './pages/ImageComparisonPage';
 import ProductComparator from './pages/ProductComparatorPage';
+import { GoogleOAuthProvider } from '@react-oauth/google';
+
 
 function AppContent() {
   const location = useLocation();
@@ -29,9 +31,15 @@ function AppContent() {
 }
 
 function App() {
+
+  const CLIENT_ID = "507142910829-kj72j2imtd4tiuu2rae4cep6nr11acof.apps.googleusercontent.com";
+
+
   return (
     <Router>
-      <AppContent />
+      <GoogleOAuthProvider clientId={CLIENT_ID}>
+        <AppContent />
+      </GoogleOAuthProvider>
     </Router>
   );
 }
