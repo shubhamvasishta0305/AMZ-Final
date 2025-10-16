@@ -2,12 +2,13 @@ import { useParams, useLocation, useNavigate } from 'react-router-dom';
 import { Package, LogOut, HelpCircle, Info } from 'lucide-react';
 
 const Navbar = () => {
-  const { sellerId } = useParams();
+  // const { sellerId } = useParams();
+  const { sellerId = 'A1EXAMPLEID' } = useParams(); // Default for testing
   const location = useLocation();
   const navigate = useNavigate();
   
   // Show seller ID on pages that have it in the URL
-  const showSellerId = sellerId && location.pathname !== '/';
+  const showSellerId = true
 
   const handleHomeClick = () => {
     navigate('/');
@@ -27,13 +28,27 @@ const Navbar = () => {
           {showSellerId && (
             <>
               <div className="h-4 w-px bg-gray-600"></div>
-              <div className="flex items-center space-x-3">
-                <span className="text-xs font-medium text-gray-300">Seller ID:</span>
-                <span className="px-2 py-1 bg-orange-500 text-white rounded text-xs font-semibold">
-                  {sellerId}
-                </span>
-                {/* Placeholder block as specified */}
-                <div className="w-16 h-6 bg-gray-700 rounded"></div>
+              <div className="flex items-center space-x-4">
+                <div className="flex items-center space-x-2">
+                  <span className="text-xs font-medium text-gray-400">Seller ID:</span>
+                  <span className="px-2 py-1 bg-orange-500 text-white rounded text-xs font-semibold">
+                    {sellerId}
+                  </span>
+                </div>
+                <div className="h-4 w-px bg-gray-600"></div>
+                <div className="flex items-center space-x-2">
+                  <span className="text-xs font-medium text-gray-400">Email:</span>
+                  <span className="text-xs text-white font-medium">
+                    reviewer@amazoncomparator.com
+                  </span>
+                </div>
+                <div className="h-4 w-px bg-gray-600"></div>
+                <div className="flex items-center space-x-2">
+                  <span className="text-xs font-medium text-gray-400">Role:</span>
+                  <span className="px-2 py-1 bg-blue-600 text-white rounded text-xs font-semibold">
+                    Reviewer
+                  </span>
+                </div>
               </div>
             </>
           )}
