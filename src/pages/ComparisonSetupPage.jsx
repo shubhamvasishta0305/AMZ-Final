@@ -126,15 +126,40 @@ const ComparisonSetupPage = () => {
     setError('');
 
     try {
+      // Re-fetch golden sheet data to get the latest URLs
+      console.log('🔄 Re-fetching golden sheet data to get latest URLs...');
+      const sheetData = await fetchGoldenSheetData();
+      console.log('✅ Fresh golden sheet data loaded:', {
+        totalRows: sheetData.totalRows,
+        fromCache: sheetData.fromCache,
+        headers: sheetData.headers
+      });
+
+      // Update products state with fresh data
+      const freshProducts = sheetData.data;
+      setProducts(freshProducts);
+
+      // Apply filters to fresh data
+      let freshFilteredProducts = [...freshProducts];
+      filterColumns.forEach(column => {
+        const filterValue = filters[column];
+        if (filterValue && !filterValue.startsWith('Select ')) {
+          freshFilteredProducts = freshFilteredProducts.filter(product => product[column] === filterValue);
+        }
+      });
+
+      console.log('📊 Fresh filtered products count:', freshFilteredProducts.length);
+      setFilteredProducts(freshFilteredProducts);
+
       // Check if we have any filtered products
-      if (filteredProducts.length === 0) {
+      if (freshFilteredProducts.length === 0) {
         setError('No products match the selected filters. Please adjust your filters.');
         setIsLoading(false);
         return;
       }
 
       // Get the first product from filtered results
-      const selectedProduct = filteredProducts[0];
+      const selectedProduct = freshFilteredProducts[0];
       
       // Get the URL from the selected product
       const productUrl = selectedProduct.URL || selectedProduct.url;
@@ -148,7 +173,7 @@ const ComparisonSetupPage = () => {
       console.log('=== LOAD URL CLICKED ===');
       console.log('Selected Product from Sheet:', selectedProduct);
       console.log('Product URL:', productUrl);
-      console.log('Total Filtered Products:', filteredProducts.length);
+      console.log('Total Filtered Products:', freshFilteredProducts.length);
       console.log('Applied Filters:', filters);
       console.log('========================');
 
@@ -216,6 +241,10 @@ const ComparisonSetupPage = () => {
       localStorage.setItem('productFilters', JSON.stringify(selectedFilters));
       console.log('💾 Stored filters in localStorage:', selectedFilters);
 
+      // Store the complete gold standard product data in localStorage
+      localStorage.setItem('goldStandardProduct', JSON.stringify(goldStandard));
+      console.log('💾 Stored gold standard product in localStorage');
+
     } catch (err) {
       console.error('❌ Error loading product:', err);
       // Even on error, show a basic product layout instead of error message
@@ -258,6 +287,10 @@ const ComparisonSetupPage = () => {
         });
         localStorage.setItem('productFilters', JSON.stringify(selectedFilters));
         console.log('💾 Stored filters in localStorage:', selectedFilters);
+
+        // Store the basic product data in localStorage even when scraping fails
+        localStorage.setItem('goldStandardProduct', JSON.stringify(basicProduct));
+        console.log('💾 Stored basic product data in localStorage');
       } else {
         setError(err.message || 'Failed to load product data');
       }
@@ -331,7 +364,7 @@ const ComparisonSetupPage = () => {
                 {!areAllFiltersSelected() ? (
                   <span className="text-amber-600">⚠ Please select all filters</span>
                 ) : filteredProducts.length > 0 ? (
-                  <span className="text-green-600">✓ {filteredProducts.length} product(s) available</span>
+                  <span className="text-green-600">✓ {filteredProducts.length} product(s) available (will re-fetch latest data)</span>
                 ) : (
                   <span className="text-red-600">⚠ No products match current filters</span>
                 )}
@@ -339,13 +372,13 @@ const ComparisonSetupPage = () => {
 
               <button
                 onClick={handleLoadUrl}
-                disabled={isLoading || !areAllFiltersSelected() || filteredProducts.length === 0}
+                disabled={isLoading || !areAllFiltersSelected()}
                 className="px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2 font-medium"
               >
                 {isLoading ? (
                   <>
                     <Loader2 className="h-4 w-4 animate-spin" />
-                    <span>Scraping Product Data...</span>
+                    <span>Loading Fresh Data...</span>
                   </>
                 ) : (
                   <>

@@ -152,7 +152,7 @@ const GoldStandardPanel = ({ product = {} }) => {
               <div className="bg-blue-50 rounded-lg p-3 space-y-2">
                 {product.productDetailsArray.map((detail, index) => (
                   <div key={index} className="flex justify-between text-sm border-b border-blue-100 pb-2 last:border-0">
-                    <span className="text-gray-600 font-medium">{detail.label}:</span>
+                    <span className="text-gray-600 font-medium">{detail.label}</span>
                     <span className="text-gray-900 text-right flex-1 ml-2">{detail.value}</span>
                   </div>
                 ))}
@@ -170,7 +170,7 @@ const GoldStandardPanel = ({ product = {} }) => {
               <div className="bg-amber-50 rounded-lg p-3 space-y-2">
                 {product.manufacturingDetailsArray.map((detail, index) => (
                   <div key={index} className="flex justify-between text-sm border-b border-amber-100 pb-2 last:border-0">
-                    <span className="text-gray-600 font-medium">{detail.label}:</span>
+                    <span className="text-gray-600 font-medium">{detail.label}</span>
                     <span className="text-gray-900 text-right flex-1 ml-2">{detail.value}</span>
                   </div>
                 ))}

@@ -101,10 +101,10 @@ async function getRealSheetData() {
 // Function to get golden sheet data (Page 2)
 async function getGoldenSheetData() {
     // Return cached data if it's fresh (5 minutes)
-    if (goldenSheetDataCache && lastGoldenCacheTime && (Date.now() - lastGoldenCacheTime) < 3000000) {
-        console.log('📊 Using cached golden sheet data');
-        return goldenSheetDataCache;
-    }
+    // if (goldenSheetDataCache && lastGoldenCacheTime && (Date.now() - lastGoldenCacheTime) < 3000000) {
+    //     console.log('📊 Using cached golden sheet data');
+    //     return goldenSheetDataCache;
+    // }
 
     try {
         console.log('📊 Fetching fresh data from Golden Sheet CSV...');
@@ -318,7 +318,19 @@ function formatScrapedData(rawData) {
     };
 }
 
-// Real Python Scraper Integration
+// Helper function to format details as array for frontend
+function formatDetailsAsArray(obj) {
+    if (!obj || typeof obj !== 'object') return [];
+    
+    return Object.entries(obj)
+        .filter(([key, value]) => key && value && key !== 'status')
+        .map(([key, value]) => ({
+            label: key.trim(),
+            value: value
+        }));
+}
+
+// Dual Scraper Integration - amz_scraper for images, scraper.py for other data
 app.post('/api/scrape-product', async (req, res) => {
     const { url } = req.body;
     
@@ -326,65 +338,93 @@ app.post('/api/scrape-product', async (req, res) => {
         return res.status(400).json({ success: false, error: 'URL is required' });
     }
 
-    console.log('🔍 Starting Python scraping for URL:', url);
+    console.log('🔍 Starting dual scraping for URL:', url);
 
     try {
-        // Try using Python scraper first
-        const pythonProcess = spawn('python3', ['scraper.py', url]);
-        
-        let scrapedData = '';
-        let errorOutput = '';
+        // Run both scrapers in parallel
+        const scraperPromise = new Promise((resolve, reject) => {
+            const scraperProcess = spawn('python3', ['scraper.py', url]);
+            let scraperData = '';
+            let scraperError = '';
 
-        pythonProcess.stdout.on('data', (data) => {
-            scrapedData += data.toString();
-        });
+            scraperProcess.stdout.on('data', (data) => {
+                scraperData += data.toString();
+            });
 
-        pythonProcess.stderr.on('data', (data) => {
-            errorOutput += data.toString();
-            console.error('Python stderr:', data.toString());
-        });
+            scraperProcess.stderr.on('data', (data) => {
+                scraperError += data.toString();
+                console.log('scraper.py stderr:', data.toString());
+            });
 
-        pythonProcess.on('close', (code) => {
-            console.log('Python process exited with code:', code);
-            
-            if (code === 0 && scrapedData) {
-                try {
-                    // Parse the JSON output from Python
-                    const parsedData = JSON.parse(scrapedData);
-                    
-                    if (parsedData.success) {
-                        console.log('✅ Successfully scraped product data with Python');
-                        
-                        // Format the data for frontend
-                        const formattedData = formatScrapedData(parsedData);
-                        
-                        res.json(formattedData);
-                    } else {
-                        console.error('❌ Python scraper returned error:', parsedData.error);
-                        // Return error response
-                        res.json({
-                            success: false,
-                            error: parsedData.error || 'Scraping failed',
-                            message: 'Unable to scrape product data'
-                        });
+            scraperProcess.on('close', (code) => {
+                if (code === 0 && scraperData) {
+                    try {
+                        resolve(JSON.parse(scraperData));
+                    } catch (e) {
+                        reject(new Error('Failed to parse scraper.py output'));
                     }
-                } catch (parseError) {
-                    console.error('❌ JSON Parse Error:', parseError.message);
-                    res.json({
-                        success: false,
-                        error: 'Failed to parse scraper response',
-                        message: 'Data formatting error'
-                    });
+                } else {
+                    reject(new Error(`scraper.py failed with code ${code}`));
                 }
-            } else {
-                console.error('❌ Python process failed with code:', code);
-                res.json({
-                    success: false,
-                    error: 'Python scraper process failed',
-                    message: 'Scraper execution error'
-                });
-            }
+            });
         });
+
+        const amzScraperPromise = new Promise((resolve, reject) => {
+            const amzProcess = spawn('python3', ['amz_scraper.py', url, '--formatted']);
+            let amzData = '';
+            let amzError = '';
+
+            amzProcess.stdout.on('data', (data) => {
+                amzData += data.toString();
+            });
+
+            amzProcess.stderr.on('data', (data) => {
+                amzError += data.toString();
+                console.log('amz_scraper.py stderr:', data.toString());
+            });
+
+            amzProcess.on('close', (code) => {
+                if (code === 0 && amzData) {
+                    try {
+                        resolve(JSON.parse(amzData));
+                    } catch (e) {
+                        reject(new Error('Failed to parse amz_scraper.py output'));
+                    }
+                } else {
+                    reject(new Error(`amz_scraper.py failed with code ${code}`));
+                }
+            });
+        });
+
+        // Wait for both scrapers to complete
+        const [scraperResult, amzScraperResult] = await Promise.all([scraperPromise, amzScraperPromise]);
+
+        console.log('✅ Both scrapers completed successfully');
+
+        // Merge results: scraper.py data + amz_scraper images
+        const mergedResult = {
+            success: true,
+            product: {
+                title: scraperResult.title || 'N/A',
+                description: scraperResult.description || 'N/A',
+                // asin: scraperResult.asin || amzScraperResult.product?.asin || 'N/A',
+                images: amzScraperResult.product?.images || []  // Images from amz_scraper
+            },
+            details: {
+                featureBullets: scraperResult.bullets || [],
+                productDetails: formatDetailsAsArray(scraperResult.productDetails),
+                manufacturingDetails: formatDetailsAsArray(scraperResult.manufacturingDetails),
+                additionalInfo: formatDetailsAsArray(scraperResult.additionalInfo)
+            },
+            raw: {
+                productDetails: scraperResult.productDetails,
+                manufacturingDetails: scraperResult.manufacturingDetails,
+                additionalInfo: scraperResult.additionalInfo
+            }
+        };
+
+        console.log('📦 Merged result:', JSON.stringify(mergedResult, null, 2));
+        res.json(mergedResult);
 
     } catch (error) {
         console.error('❌ Scraping error:', error.message);

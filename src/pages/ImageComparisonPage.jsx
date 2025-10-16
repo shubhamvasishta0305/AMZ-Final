@@ -9,9 +9,12 @@ const ImageComparisonPage = () => {
   const [referenceImage, setReferenceImage] = useState(null);
   const [referenceFile, setReferenceFile] = useState(null);
   const [productAttributes, setProductAttributes] = useState({});
+  const [goldStandardProduct, setGoldStandardProduct] = useState(null);
+  const [existingProduct, setExistingProduct] = useState(null);
 
-  // Load product attributes from localStorage on component mount
+  // Load product data from localStorage on component mount
   useEffect(() => {
+    // Load product attributes/filters
     const storedFilters = localStorage.getItem('productFilters');
     if (storedFilters) {
       try {
@@ -22,29 +25,74 @@ const ImageComparisonPage = () => {
         console.error('Error parsing stored filters:', error);
       }
     }
+
+    // Load gold standard product
+    const storedGoldStandard = localStorage.getItem('goldStandardProduct');
+    if (storedGoldStandard) {
+      try {
+        const goldProduct = JSON.parse(storedGoldStandard);
+        setGoldStandardProduct(goldProduct);
+        console.log('✅ Loaded gold standard product from localStorage:', goldProduct);
+      } catch (error) {
+        console.error('Error parsing stored gold standard product:', error);
+      }
+    }
+
+    // Load existing product
+    const storedExisting = localStorage.getItem('existingProduct');
+    if (storedExisting) {
+      try {
+        const existing = JSON.parse(storedExisting);
+        setExistingProduct(existing);
+        console.log('✅ Loaded existing product from localStorage:', existing);
+      } catch (error) {
+        console.error('Error parsing stored existing product:', error);
+      }
+    }
   }, []);
 
-  // Real kurti images for gold standard
-  const [goldStandardImages] = useState([
-    'https://images.unsplash.com/photo-1488272690691-2636704d6000?fm=jpg&q=60&w=3000&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxzZWFyY2h8M3x8bGlua3xlbnwwfHwwfHx8MA%3D%3D',
-    'https://images.meesho.com/images/products/267890123/xyz12_512.webp', 
-    'https://images.meesho.com/images/products/301245678/abc34_512.webp',
-    'https://images.meesho.com/images/products/289456789/def56_512.webp',
-    'https://images.meesho.com/images/products/312567890/ghi78_512.webp',
-    'https://images.meesho.com/images/products/298678901/jkl90_512.webp',
-    'https://images.meesho.com/images/products/283789012/mno12_512.webp'
-  ]);
+  // Get images from loaded products (up to 7 images each)
+  const getGoldStandardImages = () => {
+    const emptyArray = Array(7).fill(null);
+    
+    if (goldStandardProduct && goldStandardProduct.images && goldStandardProduct.images.length > 0) {
+      // Filter out duplicates by using Set with image URLs
+      const uniqueImages = [...new Set(goldStandardProduct.images)];
+      const images = uniqueImages.slice(0, 7);
+      
+      console.log('📸 Gold Standard - Total images:', goldStandardProduct.images.length, 'Unique images:', uniqueImages.length);
+      
+      // Pad with null if less than 7
+      while (images.length < 7) {
+        images.push(null);
+      }
+      return images;
+    }
+    
+    console.log('⚠️ No gold standard images found, returning empty array');
+    return emptyArray; // Return empty array if no images
+  };
 
-  // Real kurti images for existing
-  const [existingImages] = useState([
-    'https://images.meesho.com/images/products/276890123/pqr34_512.webp',
-    'https://images.meesho.com/images/products/291234567/stu56_512.webp',
-    'https://images.meesho.com/images/products/305678901/vwx78_512.webp', 
-    'https://images.meesho.com/images/products/287890123/yza90_512.webp',
-    'https://images.meesho.com/images/products/319012345/bcd12_512.webp',
-    'https://images.meesho.com/images/products/293456789/efg34_512.webp',
-    'https://images.meesho.com/images/products/275678901/hij56_512.webp'
-  ]);
+  const getExistingImages = () => {
+    const emptyArray = Array(7).fill(null);
+    
+    if (existingProduct && existingProduct.images && existingProduct.images.length > 0) {
+      // Filter out duplicates by using Set with image URLs
+      const uniqueImages = [...new Set(existingProduct.images)];
+      const images = uniqueImages.slice(0, 7);
+      
+      console.log('📸 Existing Product - Total images:', existingProduct.images.length, 'Unique images:', uniqueImages.length);
+      
+      // Pad with null if less than 7
+      while (images.length < 7) {
+        images.push(null);
+      }
+      return images;
+    }
+    
+    console.log('⚠️ No existing product images found, returning empty array');
+    return emptyArray; // Return empty array if no images
+  };
 
   const [generatedImages, setGeneratedImages] = useState(
     Array(7).fill(null).map(() => ({ url: null, isLoading: false }))
@@ -180,6 +228,14 @@ const ImageComparisonPage = () => {
   const ImageCard = ({ src, alt, label, type, index = null, onGenerate = null, isLoading = false }) => (
     <div className="bg-white rounded-md border border-gray-200 overflow-hidden mb-2">
       <div className="aspect-square bg-gray-50 flex items-center justify-center relative">
+        {/* For reference/current types with no image */}
+        {(type === 'reference' || type === 'current') && !src && (
+          <div className="flex flex-col items-center justify-center p-3 text-center">
+            <div className="text-gray-400 text-xs">No image</div>
+          </div>
+        )}
+        
+        {/* For generate type - show generate button when no image */}
         {type === 'generate' && !src && !isLoading && (
           <button
             onClick={() => onGenerate(index)}
@@ -189,12 +245,16 @@ const ImageComparisonPage = () => {
             <span className="text-xs font-medium text-gray-700">Generate</span>
           </button>
         )}
+        
+        {/* Loading state */}
         {isLoading && (
           <div className="flex flex-col items-center justify-center p-3 text-center">
             <Loader2 className="h-5 w-5 text-blue-600 animate-spin mb-1" />
             <span className="text-xs font-medium text-gray-700">Generating...</span>
           </div>
         )}
+        
+        {/* Show image when available */}
         {src && !isLoading && (
           <>
             <img
@@ -203,6 +263,7 @@ const ImageComparisonPage = () => {
               className="w-full h-full object-contain cursor-pointer hover:opacity-90 transition-opacity"
               onClick={() => setPreviewImage({ src, alt, label })}
               onError={(e) => {
+                console.error('Image load error for:', src);
                 e.target.src = `https://placehold.co/250x250/E5E7EB/6B7280?text=${encodeURIComponent(alt)}`;
               }}
             />
@@ -353,7 +414,7 @@ const ImageComparisonPage = () => {
           </div>
         </div>
 
-        {/* Three Column Layout with Overall Border */}
+          {/* Three Column Layout with Overall Border */}
         <div className="bg-white rounded-lg shadow-lg border-2 border-gray-300 p-4">
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
             {/* Gold Standard Images */}
@@ -361,9 +422,14 @@ const ImageComparisonPage = () => {
               <div className="text-center mb-3">
                 <h2 className="text-base font-bold text-gray-900 mb-1">Gold Standard Images</h2>
                 <p className="text-xs text-gray-600">Reference benchmark images</p>
+                {/* {goldStandardProduct && (
+                  <p className="text-xs text-blue-600 mt-1 font-medium truncate" title={goldStandardProduct.title}>
+                    {goldStandardProduct.title}
+                  </p>
+                )} */}
               </div>
               <div className="space-y-1">
-                {goldStandardImages.map((src, index) => (
+                {getGoldStandardImages().map((src, index) => (
                   <ImageCard
                     key={`gold-${index}`}
                     src={src}
@@ -380,9 +446,14 @@ const ImageComparisonPage = () => {
               <div className="text-center mb-3">
                 <h2 className="text-base font-bold text-gray-900 mb-1">Your Existing Images</h2>
                 <p className="text-xs text-gray-600">Current product images</p>
+                {/* {existingProduct && (
+                  <p className="text-xs text-green-600 mt-1 font-medium truncate" title={existingProduct.title}>
+                    {existingProduct.title}
+                  </p>
+                )} */}
               </div>
               <div className="space-y-1">
-                {existingImages.map((src, index) => (
+                {getExistingImages().map((src, index) => (
                   <ImageCard
                     key={`existing-${index}`}
                     src={src}
@@ -416,9 +487,7 @@ const ImageComparisonPage = () => {
               </div>
             </div>
           </div>
-        </div>
-
-        {/* Action Bar */}
+        </div>        {/* Action Bar */}
         <div className="mt-4 bg-white rounded-lg shadow-sm border border-gray-200 p-3">
           <div className="flex items-center justify-between">
             <div className="text-xs text-gray-600">
