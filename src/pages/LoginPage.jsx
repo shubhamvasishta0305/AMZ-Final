@@ -11,7 +11,6 @@ const LoginPage = () => {
                 <div className="bg-white rounded-2xl shadow-lg p-10 w-110 h-96">
                     <div className="text-center mb-6">
                         <div className="inline-flex items-center mb-5">
-                            <div className="w-9 h-7 bg-orange-500 rounded" />
                             <div className="ml-2 text-orange-600 text-2xl font-bold">COMPARATOR</div>
                         </div>
                         <h2 className="text-3xl font-bold text-gray-900 p-2">Welcome to Amazon Product Comparator</h2>

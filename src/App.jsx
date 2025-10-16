@@ -4,6 +4,7 @@ import ScrollToTop from './components/ScrollToTop';
 import DataSelectionPage from './pages/DataSelectionPage';
 import LoginPage from './pages/LoginPage';
 import ComparisonSetupPage from './pages/ComparisonSetupPage';
+import FinalPage from './pages/FinalPage';
 // import ExistingProductEditorPage from './extra/ExistingProductEditorPage';
 import NewProductCreationPage from './pages/NewProductCreationPage';
 import ImageComparisonPage from './pages/ImageComparisonPage';
@@ -25,6 +26,7 @@ function AppContent() {
         <Route path="/edit-product/:productId" element={<ProductComparator />} />
         <Route path="/new-product" element={<NewProductCreationPage />} />
         <Route path="/compare-images" element={<ImageComparisonPage />} /> 
+        <Route path="/final-page" element={<FinalPage />} />
       </Routes>
     </div>
   );
