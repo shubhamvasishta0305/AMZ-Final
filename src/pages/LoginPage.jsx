@@ -1,9 +1,10 @@
-import { useNavigate } from "react-router-dom";
-import { GoogleLogin } from "@react-oauth/google"
+import { useNavigate, useLocation } from "react-router-dom";
+import { GoogleLogin } from "@react-oauth/google";
+import { jwtDecode } from "jwt-decode";
 
 const LoginPage = () => {
-
     const navigate = useNavigate();
+    const location = useLocation();
     
     return (
         <div>
@@ -25,16 +26,36 @@ const LoginPage = () => {
                     </button> */}
                     <div className="flex justify-center items-center">
                         <GoogleLogin
-                            
                             onSuccess={credentialResponse => {
-                                console.log(credentialResponse);
-                                navigate('/seller-list');
-                            }}
+                                try {
+                                    console.log('Google login response:', credentialResponse);
+                                    const decoded = jwtDecode(credentialResponse.credential);
+                                    console.log('Decoded token:', decoded);
+                                    
+                                    // Store user information in localStorage
+                                    localStorage.setItem('user', JSON.stringify({
+                                        name: decoded.name,
+                                        email: decoded.email,
+                                        picture: decoded.picture,
+                                        token: credentialResponse.credential
+                                    }));
 
-                            onError={() => {
-                                console.log('Login Failed');
+                                    console.log('User logged in as:', decoded.name);
+                                    navigate('/seller-list');
+                                } catch (error) {
+                                    console.error('Error during login:', error);
+                                    alert('Login failed. Please try again.');
+                                }
+                            }}
+                            onError={(error) => {
+                                console.error('Login Failed:', error);
+                                localStorage.removeItem('user');
+                                alert('Login failed. Please try again.');
                             }}
                             logo_alignment="left"
+                            type="standard"
+                            theme="outline"
+                            size="large"
                             useOneTap
                         />
                     </div>
