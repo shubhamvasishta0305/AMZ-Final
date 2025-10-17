@@ -5,7 +5,7 @@ import { useNavigate } from 'react-router-dom';
 import { fetchSheetData, fetchSellerData } from '../api/api';
 import { ChevronDown, Download, ArrowRight, Loader2 } from 'lucide-react';
 
-const DataSelectionPage = () => {
+const DataSelectionPage = ({ updateSellerId }) => {
 
   const [selectedSeller, setSelectedSeller] = useState('');
   const [sellerData, setSellerData] = useState(null);
@@ -47,21 +47,22 @@ const DataSelectionPage = () => {
   }, []);
 
   const handleSellerChange = async (sellerId) => {
-    if (!sellerId) {
-      setSelectedSeller('');
+    try {
+      if (!sellerId) {
+        setSelectedSeller('');
+        setSellerData(null);
+        setRawFilteredData(null);
+        setError(null);
+        return;
+      }
+
+      setIsLoading(true);
+      setSelectedSeller(sellerId);
+      updateSellerId(sellerId); // Update the sellerId in App component
+      setError(null);
       setSellerData(null);
       setRawFilteredData(null);
-      setError(null);
-      return;
-    }
 
-    setSelectedSeller(sellerId);
-    setIsLoading(true);
-    setError(null);
-    setSellerData(null);
-    setRawFilteredData(null);
-
-    try {
       // Filter the raw sheet data by seller_id
       const sheetData = await fetchSheetData();
       const filteredRawData = sheetData.data.filter(item => {
@@ -70,8 +71,9 @@ const DataSelectionPage = () => {
       });
       
       setRawFilteredData(filteredRawData);
-    } catch (err) {
-      setError(err.message);
+    } catch (error) {
+      setError(error.message);
+      console.error('Error in handleSellerChange:', error);
     } finally {
       setIsLoading(false);
     }

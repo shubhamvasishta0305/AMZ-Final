@@ -1,17 +1,25 @@
 import { useParams, useLocation, useNavigate } from 'react-router-dom';
 import { Package, LogOut, HelpCircle, Info } from 'lucide-react';
 
-const Navbar = () => {
+const Navbar = ({ sellerId }) => {
   // const { sellerId } = useParams();
-  const { sellerId = 'A1EXAMPLEID' } = useParams(); // Default for testing
   const location = useLocation();
   const navigate = useNavigate();
   
   // Show seller ID on pages that have it in the URL
   const showSellerId = true
 
-  const handleHomeClick = () => {
+  const showSellerInfo = location.pathname !== '/seller-list';
+
+
+  const handleLogout = () => {
+    localStorage.removeItem('user');
+    localStorage.removeItem('sellerId');
     navigate('/');
+  };
+
+  const handleHomeClick = () => {
+    navigate('/seller-list');
   };
 
   return (
@@ -29,17 +37,23 @@ const Navbar = () => {
             <>
               <div className="h-4 w-px bg-gray-600"></div>
               <div className="flex items-center space-x-4">
-                <div className="flex items-center space-x-2">
-                  <span className="text-xs font-medium text-gray-400">Seller ID:</span>
-                  <span className="px-2 py-1 bg-orange-500 text-white rounded text-xs font-semibold">
-                    {sellerId}
-                  </span>
-                </div>
-                <div className="h-4 w-px bg-gray-600"></div>
+                
+                {showSellerInfo && (
+                  <>
+                    <div className="flex items-center space-x-2">
+                      <span className="text-xs font-medium text-gray-400">Seller ID:</span>
+                      <span className="px-2 py-1 bg-orange-500 text-white rounded text-xs font-semibold">
+                        {sellerId}
+                      </span>
+                    </div>
+                    <div className="h-4 w-px bg-gray-600"></div>
+                  </>
+                )}
+                
                 <div className="flex items-center space-x-2">
                   <span className="text-xs font-medium text-gray-400">Email:</span>
                   <span className="text-xs text-white font-medium">
-                    reviewer@amazoncomparator.com
+                    {localStorage.getItem('user') ? JSON.parse(localStorage.getItem('user')).email : 'Guest'}
                   </span>
                 </div>
                 <div className="h-4 w-px bg-gray-600"></div>
@@ -64,7 +78,7 @@ const Navbar = () => {
             <Info className="h-4 w-4" />
             <span>About</span>
           </button>
-          <button className="flex items-center space-x-1 px-3 py-1 hover:text-white text-xs rounded hover:bg-gray-800 transition-colors border border-gray-700 bg-orange-400">
+          <button onClick={() => handleLogout()} className="flex items-center space-x-1 px-3 py-1 hover:text-white text-xs rounded hover:bg-gray-800 transition-colors border border-gray-700 bg-orange-400">
             <LogOut className="h-4 w-4" />
             <span>Logout</span>
           </button>

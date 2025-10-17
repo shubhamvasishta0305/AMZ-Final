@@ -48,7 +48,7 @@ const FinalPage = () => {
       competitorTitle: "Generic Men's Cotton Regular Fit Casual Checkered Shirt",
       competitorPrice: 449.00,
       competitorAsin: "B0D8ZLXXXX",
-      competitorImage: "https://m.media-amazon.com/images/I/71cFpnm0b6L._SX679_.jpg",
+      competitorImage: "https://m.media-amazon.com/images/I/81nKjIkXbdL._SY741_.jpg",
       competitorRating: 4.2,
       competitorReviews: 850,
 
@@ -122,9 +122,6 @@ const FinalPage = () => {
                     alt={comparisonData?.competitorTitle}
                     className="max-h-full max-w-full object-contain"
                   />
-                </div>
-                <div className="text-center text-sm text-[#565959] mt-2">
-                  Roll over image to zoom in
                 </div>
               </div>
 
@@ -246,9 +243,6 @@ const FinalPage = () => {
 
               {/* Delivery & Analysis */}
               <div className="py-4 space-y-4">
-                <div className="text-[#007600] font-medium">
-                  {comparisonData?.deliveryDate}
-                </div>
                 
                 <div className="bg-[#F4F4F4] p-4 rounded">
                   <h3 className="text-[#0F1111] font-medium mb-2">Comparison Analysis</h3>
