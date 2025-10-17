@@ -1,5 +1,4 @@
 import { BrowserRouter as Router, Routes, Route, useLocation } from 'react-router-dom';
-import { useState, useEffect } from 'react';
 import Navbar from './components/Navbar';
 import ScrollToTop from './components/ScrollToTop';
 import DataSelectionPage from './pages/DataSelectionPage';
@@ -16,25 +15,17 @@ import ProtectedRoute from './components/ProtectedRoute';
 function AppContent() {
   const location = useLocation();
   const hideNavbar = location.pathname === '/';
-  const [sellerId, setSellerId] = useState('');
 
   const updateSellerId = (id) => {
-    setSellerId(id);
     localStorage.setItem('sellerId', id);
+    // Dispatch custom event for Navbar to listen
+    window.dispatchEvent(new CustomEvent('sellerIdUpdated', { detail: id }));
   };
-
-  // Load sellerId from localStorage on component mount
-  useEffect(() => {
-    const savedSellerId = localStorage.getItem('sellerId');
-    if (savedSellerId) {
-      setSellerId(savedSellerId);
-    }
-  }, []);
 
   return (
     <div className="min-h-screen bg-gray-50">
       <ScrollToTop />
-      {!hideNavbar && <Navbar sellerId={sellerId}/>}
+      {!hideNavbar && <Navbar />}
       <Routes>
         <Route path="/" element={<LoginPage />} />
         <Route 

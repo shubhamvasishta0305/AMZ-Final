@@ -757,7 +757,8 @@ const ProductComparator = () => {
       localStorage.setItem('existingProduct', JSON.stringify(existingProduct));
       console.log('💾 Stored existing product in localStorage:', existingProduct);
       
-      navigate('/compare-images');
+      // Pass state to indicate NOT coming from new product page
+      navigate('/compare-images', { state: { isNewProduct: false } });
     }
   };
 
@@ -878,53 +879,62 @@ const ProductComparator = () => {
                       </div>
                     ))
                   ) : (
-                    // Scraped format with sections
-                    <>
-                      {/* Product Details Section */}
-                      {goldenProduct.productDetailsArray && goldenProduct.productDetailsArray.length > 0 && (
-                        <>
-                          {goldenProduct.productDetailsArray.map((item, index) => (
-                            <div key={`pd-${index}`} className="bg-gradient-to-r from-yellow-50 to-amber-50 border border-yellow-300 rounded-lg p-3">
-                              <div className="text-xs font-semibold text-gray-600 mb-2">
-                                {item.label || item.key || 'Attribute'}
-                              </div>
-                              <p className="text-sm font-medium text-gray-800">{item.value || 'N/A'}</p>
-                            </div>
-                          ))}
-                        </>
-                      )}
+                    // Scraped format with sections - DEDUPLICATED
+                    (() => {
+                      const allAttributes = [];
+                      const seenKeys = new Set();
+                      const normalizeKey = (key) => {
+                        if (!key) return '';
+                        // Remove ALL special characters, whitespace, newlines, colons, and convert to lowercase
+                        return key.trim()
+                          .replace(/[\n\r\s:‏‎]+/g, '') // Remove newlines, spaces, colons, and special Unicode chars
+                          .toLowerCase();
+                      };
+
+                      // Collect all attributes from all sections with deduplication
+                      if (goldenProduct.productDetailsArray && goldenProduct.productDetailsArray.length > 0) {
+                        goldenProduct.productDetailsArray.forEach((item) => {
+                          const key = item.label || item.key || 'Attribute';
+                          const normalizedKey = normalizeKey(key);
+                          if (!seenKeys.has(normalizedKey)) {
+                            seenKeys.add(normalizedKey);
+                            allAttributes.push(item);
+                          }
+                        });
+                      }
                       
-                      {/* Manufacturing Details Section */}
-                      {goldenProduct.manufacturingDetailsArray && goldenProduct.manufacturingDetailsArray.length > 0 && (
-                        <>
-                          {goldenProduct.manufacturingDetailsArray.map((item, index) => (
-                            <div key={`md-${index}`} className="bg-gradient-to-r from-yellow-50 to-amber-50 border border-yellow-300 rounded-lg p-3">
-                              <div className="text-xs font-semibold text-gray-600 mb-2">
-                                {item.label || item.key || 'Attribute'}
-                              </div>
-                              <p className="text-sm font-medium text-gray-800">{item.value || 'N/A'}</p>
-                            </div>
-                          ))}
-                        </>
-                      )}
+                      if (goldenProduct.manufacturingDetailsArray && goldenProduct.manufacturingDetailsArray.length > 0) {
+                        goldenProduct.manufacturingDetailsArray.forEach((item) => {
+                          const key = item.label || item.key || 'Attribute';
+                          const normalizedKey = normalizeKey(key);
+                          if (!seenKeys.has(normalizedKey)) {
+                            seenKeys.add(normalizedKey);
+                            allAttributes.push(item);
+                          }
+                        });
+                      }
                       
-                      {/* Additional Info Section */}
-                      {goldenProduct.additionalInfoArray && goldenProduct.additionalInfoArray.length > 0 && (
-                        <>
-                          <div className="bg-purple-100 border border-purple-300 rounded-lg p-2 mt-2">
-                            <h4 className="text-xs font-bold text-purple-900 uppercase">Additional Information</h4>
+                      if (goldenProduct.additionalInfoArray && goldenProduct.additionalInfoArray.length > 0) {
+                        goldenProduct.additionalInfoArray.forEach((item) => {
+                          const key = item.label || item.key || 'Attribute';
+                          const normalizedKey = normalizeKey(key);
+                          if (!seenKeys.has(normalizedKey)) {
+                            seenKeys.add(normalizedKey);
+                            allAttributes.push(item);
+                          }
+                        });
+                      }
+
+                      // Render deduplicated attributes
+                      return allAttributes.map((item, index) => (
+                        <div key={`attr-${index}`} className="bg-gradient-to-r from-yellow-50 to-amber-50 border border-yellow-300 rounded-lg p-3">
+                          <div className="text-xs font-semibold text-gray-600 mb-2">
+                            {item.label || item.key || 'Attribute'}
                           </div>
-                          {goldenProduct.additionalInfoArray.map((item, index) => (
-                            <div key={`ai-${index}`} className="bg-gradient-to-r from-yellow-50 to-amber-50 border border-yellow-300 rounded-lg p-3">
-                              <div className="text-xs font-semibold text-gray-600 mb-2">
-                                {item.label || item.key || 'Attribute'}
-                              </div>
-                              <p className="text-sm font-medium text-gray-800">{item.value || 'N/A'}</p>
-                            </div>
-                          ))}
-                        </>
-                      )}
-                    </>
+                          <p className="text-sm font-medium text-gray-800">{item.value || 'N/A'}</p>
+                        </div>
+                      ));
+                    })()
                   )}
                 </div>
 

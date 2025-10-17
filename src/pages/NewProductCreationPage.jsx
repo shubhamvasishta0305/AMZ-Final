@@ -130,7 +130,8 @@ const NewProductCreationPage = () => {
       ...productAttributes
     };
     console.log('Saving draft:', formData);
-    navigate('/compare-images');
+    // Pass state to indicate coming from new product page
+    navigate('/compare-images', { state: { isNewProduct: true } });
   };
 
   const calculateProgress = () => {

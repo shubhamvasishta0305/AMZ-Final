@@ -5,13 +5,14 @@ import { useNavigate } from 'react-router-dom';
 import { fetchSheetData, fetchSellerData } from '../api/api';
 import { ChevronDown, Download, ArrowRight, Loader2 } from 'lucide-react';
 
-const DataSelectionPage = ({ updateSellerId }) => {
+const DataSelectionPage = () => {
 
   const [selectedSeller, setSelectedSeller] = useState('');
   const [sellerData, setSellerData] = useState(null);
   const [rawFilteredData, setRawFilteredData] = useState(null); // Store original API data for selected seller
   const [tableHeaders, setTableHeaders] = useState([]); // Store headers from API
   const [isLoading, setIsLoading] = useState(false);
+  const [isLoadingDropdown, setIsLoadingDropdown] = useState(true); // Loading state for dropdown
   const [error, setError] = useState(null);
   const [availableOptions, setAvailableOptions] = useState([]);
   const [rawSheetData, setRawSheetData] = useState(null);
@@ -20,6 +21,7 @@ const DataSelectionPage = ({ updateSellerId }) => {
   // Fetch available sellers on component mount
   useEffect(() => {
     const loadAvailableSellers = async () => {
+      setIsLoadingDropdown(true);
       try {
         const sheetData = await fetchSheetData();
         setRawSheetData(sheetData.data);
@@ -40,6 +42,8 @@ const DataSelectionPage = ({ updateSellerId }) => {
       } catch (err) {
         console.error('Failed to load sellers:', err);
         setAvailableOptions([]);
+      } finally {
+        setIsLoadingDropdown(false);
       }
     };
     
@@ -47,22 +51,21 @@ const DataSelectionPage = ({ updateSellerId }) => {
   }, []);
 
   const handleSellerChange = async (sellerId) => {
-    try {
-      if (!sellerId) {
-        setSelectedSeller('');
-        setSellerData(null);
-        setRawFilteredData(null);
-        setError(null);
-        return;
-      }
-
-      setIsLoading(true);
-      setSelectedSeller(sellerId);
-      updateSellerId(sellerId); // Update the sellerId in App component
-      setError(null);
+    if (!sellerId) {
+      setSelectedSeller('');
       setSellerData(null);
       setRawFilteredData(null);
+      setError(null);
+      return;
+    }
 
+    setSelectedSeller(sellerId);
+    setIsLoading(true);
+    setError(null);
+    setSellerData(null);
+    setRawFilteredData(null);
+
+    try {
       // Filter the raw sheet data by seller_id
       const sheetData = await fetchSheetData();
       const filteredRawData = sheetData.data.filter(item => {
@@ -71,9 +74,8 @@ const DataSelectionPage = ({ updateSellerId }) => {
       });
       
       setRawFilteredData(filteredRawData);
-    } catch (error) {
-      setError(error.message);
-      console.error('Error in handleSellerChange:', error);
+    } catch (err) {
+      setError(err.message);
     } finally {
       setIsLoading(false);
     }
@@ -134,17 +136,23 @@ const DataSelectionPage = ({ updateSellerId }) => {
                   id="seller-select"
                   value={selectedSeller}
                   onChange={(e) => handleSellerChange(e.target.value)}
-                  className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 appearance-none cursor-pointer text-sm"
-                  disabled={isLoading}
+                  className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 appearance-none cursor-pointer text-sm disabled:bg-gray-100 disabled:cursor-not-allowed"
+                  disabled={isLoading || isLoadingDropdown}
                 >
-                  <option value="">Choose a seller...</option>
+                  <option value="">
+                    {isLoadingDropdown ? 'Loading sellers...' : 'Choose a seller...'}
+                  </option>
                   {availableOptions.map((seller) => (
                     <option key={seller.id} value={seller.id}>
                       {seller.name}
                     </option>
                   ))}
                 </select>
-                <ChevronDown className="absolute right-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
+                {isLoadingDropdown ? (
+                  <Loader2 className="absolute right-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-blue-600 animate-spin" />
+                ) : (
+                  <ChevronDown className="absolute right-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
+                )}
               </div>
             </div>
           </div>

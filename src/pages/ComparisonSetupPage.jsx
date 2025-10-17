@@ -18,6 +18,15 @@ const ComparisonSetupPage = () => {
   const [filterOptions, setFilterOptions] = useState({}); // Options for each column
   const [filters, setFilters] = useState({}); // User-selected filter values
 
+  // Update sellerId in localStorage when component mounts
+  useEffect(() => {
+    if (sellerId) {
+      localStorage.setItem('sellerId', sellerId);
+      // Trigger a custom event to notify Navbar
+      window.dispatchEvent(new CustomEvent('sellerIdUpdated', { detail: sellerId }));
+    }
+  }, [sellerId]);
+
   // Fetch products on component mount
   useEffect(() => {
     const loadProducts = async () => {

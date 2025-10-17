@@ -4,6 +4,8 @@ const cors = require('cors');
 const axios = require('axios');
 const { parse } = require('csv-parse/sync');
 const { spawn } = require('child_process');
+const { google } = require('googleapis');
+const fs = require('fs');
 
 const app = express();
 const PORT = process.env.PORT || 3000; 
@@ -522,6 +524,199 @@ app.post('/api/submit-listing', (req, res) => {
         submittedData: req.body
     });
 });
+
+// Google Sheets Upload API - Append CSV data to a common sheet
+app.post('/api/upload-to-sheets', async (req, res) => {
+    const { csvData, sheetName } = req.body;
+    
+    if (!csvData || !Array.isArray(csvData)) {
+        return res.status(400).json({ 
+            success: false, 
+            error: 'csvData (array of rows) is required' 
+        });
+    }
+
+    const SPREADSHEET_ID = '1-azsWJHPgwUicaX1bdJUoH-4bFxR-sFmwtmFeeDUXgc';
+    const COMMON_SHEET_NAME = 'Product_Data'; // Common sheet name for all products
+
+    try {
+        console.log('📊 Uploading to Google Sheets...');
+        console.log('📋 Sheet name:', COMMON_SHEET_NAME);
+        console.log('📦 Data rows:', csvData.length);
+
+        // Load service account credentials
+        const auth = new google.auth.GoogleAuth({
+            keyFile: path.join(__dirname, 'credentials.json'),
+            scopes: ['https://www.googleapis.com/auth/spreadsheets'],
+        });
+
+        const sheets = google.sheets({ version: 'v4', auth });
+
+        // Check if the common sheet exists
+        let sheetExists = false;
+        let sheetId = null;
+        
+        try {
+            const response = await sheets.spreadsheets.get({
+                spreadsheetId: SPREADSHEET_ID,
+            });
+            
+            const sheet = response.data.sheets.find(
+                (s) => s.properties.title === COMMON_SHEET_NAME
+            );
+            
+            if (sheet) {
+                sheetExists = true;
+                sheetId = sheet.properties.sheetId;
+                console.log('✅ Sheet already exists, will append data');
+            }
+        } catch (error) {
+            console.log('📄 Sheet does not exist, will create new one');
+        }
+
+        // Step 1: Create the sheet if it doesn't exist
+        if (!sheetExists) {
+            console.log('📄 Creating new sheet:', COMMON_SHEET_NAME);
+            const createResponse = await sheets.spreadsheets.batchUpdate({
+                spreadsheetId: SPREADSHEET_ID,
+                requestBody: {
+                    requests: [
+                        {
+                            addSheet: {
+                                properties: {
+                                    title: COMMON_SHEET_NAME,
+                                },
+                            },
+                        },
+                    ],
+                },
+            });
+
+            sheetId = createResponse.data.replies[0].addSheet.properties.sheetId;
+            console.log('✅ New sheet created:', COMMON_SHEET_NAME);
+
+            // Write headers for new sheet
+            console.log('📝 Writing headers to new sheet...');
+            await sheets.spreadsheets.values.update({
+                spreadsheetId: SPREADSHEET_ID,
+                range: `${COMMON_SHEET_NAME}!A1`,
+                valueInputOption: 'RAW',
+                requestBody: {
+                    values: [csvData[0]], // First row is headers
+                },
+            });
+
+            // Format the header row (make it bold and freeze)
+            await sheets.spreadsheets.batchUpdate({
+                spreadsheetId: SPREADSHEET_ID,
+                requestBody: {
+                    requests: [
+                        {
+                            repeatCell: {
+                                range: {
+                                    sheetId: sheetId,
+                                    startRowIndex: 0,
+                                    endRowIndex: 1,
+                                },
+                                cell: {
+                                    userEnteredFormat: {
+                                        textFormat: {
+                                            bold: true,
+                                        },
+                                        backgroundColor: {
+                                            red: 0.9,
+                                            green: 0.9,
+                                            blue: 0.9,
+                                        },
+                                    },
+                                },
+                                fields: 'userEnteredFormat(textFormat,backgroundColor)',
+                            },
+                        },
+                        {
+                            updateSheetProperties: {
+                                properties: {
+                                    sheetId: sheetId,
+                                    gridProperties: {
+                                        frozenRowCount: 1,
+                                    },
+                                },
+                                fields: 'gridProperties.frozenRowCount',
+                            },
+                        },
+                    ],
+                },
+            });
+            console.log('✅ Headers formatted and frozen');
+        }
+
+        // Step 2: Get the current number of rows in the sheet
+        const existingDataResponse = await sheets.spreadsheets.values.get({
+            spreadsheetId: SPREADSHEET_ID,
+            range: `${COMMON_SHEET_NAME}!A:A`,
+        });
+
+        const existingRowCount = existingDataResponse.data.values ? existingDataResponse.data.values.length : 0;
+        const nextRow = existingRowCount + 1;
+
+        console.log('📊 Current rows in sheet:', existingRowCount);
+        console.log('📝 Will append starting at row:', nextRow);
+
+        // Step 3: Append the data (skip headers if sheet already exists)
+        const dataToAppend = sheetExists ? csvData.slice(1) : csvData.slice(1);
+        
+        if (dataToAppend.length > 0) {
+            await sheets.spreadsheets.values.append({
+                spreadsheetId: SPREADSHEET_ID,
+                range: `${COMMON_SHEET_NAME}!A${nextRow}`,
+                valueInputOption: 'RAW',
+                insertDataOption: 'INSERT_ROWS',
+                requestBody: {
+                    values: dataToAppend,
+                },
+            });
+
+            console.log('✅ Data appended successfully');
+        }
+
+        const sheetUrl = `https://docs.google.com/spreadsheets/d/${SPREADSHEET_ID}/edit#gid=${sheetId}`;
+
+        res.json({
+            success: true,
+            message: sheetExists ? 'Product data appended to existing sheet' : 'New sheet created and data added',
+            sheetUrl: sheetUrl,
+            tabName: COMMON_SHEET_NAME,
+            rowCount: dataToAppend.length,
+            totalRowsNow: existingRowCount + dataToAppend.length,
+        });
+
+    } catch (error) {
+        console.error('❌ Error uploading to Google Sheets:', error.message);
+        console.error('Stack:', error.stack);
+        res.status(500).json({
+            success: false,
+            error: 'Failed to upload to Google Sheets: ' + error.message,
+        });
+    }
+});
+
+// Helper function to get sheet ID by name
+async function getSheetId(sheets, spreadsheetId, sheetName) {
+    try {
+        const response = await sheets.spreadsheets.get({
+            spreadsheetId: spreadsheetId,
+        });
+        
+        const sheet = response.data.sheets.find(
+            (s) => s.properties.title === sheetName
+        );
+        
+        return sheet ? sheet.properties.sheetId : null;
+    } catch (error) {
+        console.error('Error getting sheet ID:', error.message);
+        return null;
+    }
+}
 
 // Serve main page
 app.get('/', (req, res) => {

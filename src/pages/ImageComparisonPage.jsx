@@ -1,19 +1,29 @@
 // Page 5: Image Comparison and AI Generation Page
 
 import { useState, useEffect } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { generateAIImage } from '../api/api';
-import { Wand2, Loader2, Save, X, Upload, Download, Link } from 'lucide-react';
+import { Wand2, Loader2, ArrowRight, X, Upload, Download, Link } from 'lucide-react';
 
 const ImageComparisonPage = () => {
+  const navigate = useNavigate();
+  const location = useLocation();
   const [previewImage, setPreviewImage] = useState(null);
   const [referenceImage, setReferenceImage] = useState(null);
   const [referenceFile, setReferenceFile] = useState(null);
   const [productAttributes, setProductAttributes] = useState({});
   const [goldStandardProduct, setGoldStandardProduct] = useState(null);
   const [existingProduct, setExistingProduct] = useState(null);
+  // Get isNewProduct from navigation state
+  const [isNewProduct, setIsNewProduct] = useState(location.state?.isNewProduct || false);
 
   // Load product data from localStorage on component mount
   useEffect(() => {
+    // Check if coming from new product page via navigation state
+    if (location.state?.isNewProduct) {
+      console.log('✅ Coming from new product page - hiding existing product section');
+    }
+
     // Load product attributes/filters
     const storedFilters = localStorage.getItem('productFilters');
     if (storedFilters) {
@@ -38,18 +48,20 @@ const ImageComparisonPage = () => {
       }
     }
 
-    // Load existing product
-    const storedExisting = localStorage.getItem('existingProduct');
-    if (storedExisting) {
-      try {
-        const existing = JSON.parse(storedExisting);
-        setExistingProduct(existing);
-        console.log('✅ Loaded existing product from localStorage:', existing);
-      } catch (error) {
-        console.error('Error parsing stored existing product:', error);
+    // Load existing product only if not coming from new product page
+    if (!location.state?.isNewProduct) {
+      const storedExisting = localStorage.getItem('existingProduct');
+      if (storedExisting) {
+        try {
+          const existing = JSON.parse(storedExisting);
+          setExistingProduct(existing);
+          console.log('✅ Loaded existing product from localStorage:', existing);
+        } catch (error) {
+          console.error('Error parsing stored existing product:', error);
+        }
       }
     }
-  }, []);
+  }, [location.state]);
 
   // Get images from loaded products (up to 7 images each)
   const getGoldStandardImages = () => {
@@ -221,8 +233,50 @@ const ImageComparisonPage = () => {
   };
 
   const handleSaveChanges = () => {
-    const generatedCount = generatedImages.filter(img => img.url !== null).length;
-    alert(`Saved ${generatedCount} AI-generated images to your product listing!`);
+    
+    // Get existing product images
+    const existingImages = getExistingImages().filter(img => img !== null);
+    
+    // Collect all generated image URLs (non-null)
+    const generatedImageUrls = generatedImages
+      .filter(img => img.url !== null)
+      .map(img => img.url);
+    
+    // Merge existing images with generated images
+    // Create a combined array with structure: { url, type, label }
+    const allImages = [];
+    
+    // Add existing images
+    existingImages.forEach((url, index) => {
+      allImages.push({
+        url: url,
+        type: 'existing',
+        label: imageLabels[index] || `Image ${index + 1}`
+      });
+    });
+    
+    // // Add generated images
+    // generatedImages.forEach((imgData, index) => {
+    //   if (imgData.url) {
+    //     allImages.push({
+    //       url: imgData.url,
+    //       type: 'generated',
+    //       label: imageLabels[index] || `Generated ${index + 1}`
+    //     });
+    //   }
+    // });
+    
+    console.log('📦 Existing images:', existingImages.length);
+    console.log('🎨 Generated images:', generatedImageUrls.length);
+    console.log('✅ Total combined images:', allImages.length);
+    console.log('📋 All images data:', allImages);
+    
+    // Save both to localStorage
+    localStorage.setItem('generatedImages', JSON.stringify(generatedImageUrls));
+    localStorage.setItem('allProductImages', JSON.stringify(allImages));
+    
+    // Navigate to final page
+    navigate('/final-page');
   };
 
   const ImageCard = ({ src, alt, label, type, index = null, onGenerate = null, isLoading = false }) => (
@@ -414,9 +468,9 @@ const ImageComparisonPage = () => {
           </div>
         </div>
 
-          {/* Three Column Layout with Overall Border */}
+          {/* Two or Three Column Layout with Overall Border */}
         <div className="bg-white rounded-lg shadow-lg border-2 border-gray-300 p-4">
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+          <div className={`grid grid-cols-1 ${isNewProduct ? 'lg:grid-cols-2' : 'lg:grid-cols-3'} gap-4`}>
             {/* Gold Standard Images */}
             <div className="bg-yellow-50 border-2 border-yellow-300 rounded-lg p-3">
               <div className="text-center mb-3">
@@ -441,29 +495,31 @@ const ImageComparisonPage = () => {
               </div>
             </div>
 
-            {/* Your Existing Images */}
-            <div className="border-2 border-gray-300 rounded-lg p-3">
-              <div className="text-center mb-3">
-                <h2 className="text-base font-bold text-gray-900 mb-1">Your Existing Images</h2>
-                <p className="text-xs text-gray-600">Current product images</p>
-                {/* {existingProduct && (
-                  <p className="text-xs text-green-600 mt-1 font-medium truncate" title={existingProduct.title}>
-                    {existingProduct.title}
-                  </p>
-                )} */}
+            {/* Your Existing Images - Only show if NOT coming from new product page */}
+            {!isNewProduct && (
+              <div className="border-2 border-gray-300 rounded-lg p-3">
+                <div className="text-center mb-3">
+                  <h2 className="text-base font-bold text-gray-900 mb-1">Your Existing Images</h2>
+                  <p className="text-xs text-gray-600">Current product images</p>
+                  {/* {existingProduct && (
+                    <p className="text-xs text-green-600 mt-1 font-medium truncate" title={existingProduct.title}>
+                      {existingProduct.title}
+                    </p>
+                  )} */}
+                </div>
+                <div className="space-y-1">
+                  {getExistingImages().map((src, index) => (
+                    <ImageCard
+                      key={`existing-${index}`}
+                      src={src}
+                      alt={`Current ${imageLabels[index]}`}
+                      label={imageLabels[index]}
+                      type="current"
+                    />
+                  ))}
+                </div>
               </div>
-              <div className="space-y-1">
-                {getExistingImages().map((src, index) => (
-                  <ImageCard
-                    key={`existing-${index}`}
-                    src={src}
-                    alt={`Current ${imageLabels[index]}`}
-                    label={imageLabels[index]}
-                    type="current"
-                  />
-                ))}
-              </div>
-            </div>
+            )}
 
             {/* AI Generated Images */}
             <div className="border-2 border-blue-300 rounded-lg p-3">
@@ -498,11 +554,10 @@ const ImageComparisonPage = () => {
             </div>
             <button
               onClick={handleSaveChanges}
-              disabled={generatedImages.filter(img => img.url !== null).length === 0}
-              className="flex items-center space-x-2 px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-sm"
+              className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors text-sm"
             >
-              <Save className="h-4 w-4" />
-              <span>Save Changes</span>
+              <ArrowRight className="h-4 w-4" />
+              <span>Proceed</span>
             </button>
           </div>
         </div>

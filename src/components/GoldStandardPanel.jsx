@@ -6,6 +6,37 @@ const GoldStandardPanel = ({ product = {} }) => {
   const [showFallback, setShowFallback] = useState(false);
 
   useEffect(() => {
+    // Console log product data to check for duplicates
+    console.log('=== GOLD STANDARD PRODUCT DATA ===');
+    console.log('Full product:', product);
+    
+    // Check each array for duplicates
+    if (product.productDetailsArray?.length) {
+      const labels = product.productDetailsArray.map(d => d.label);
+      const duplicates = labels.filter((label, index) => labels.indexOf(label) !== index);
+      if (duplicates.length > 0) {
+        console.warn('⚠️ DUPLICATE LABELS in productDetailsArray:', [...new Set(duplicates)]);
+      }
+    }
+    
+    if (product.manufacturingDetailsArray?.length) {
+      const labels = product.manufacturingDetailsArray.map(d => d.label);
+      const duplicates = labels.filter((label, index) => labels.indexOf(label) !== index);
+      if (duplicates.length > 0) {
+        console.warn('⚠️ DUPLICATE LABELS in manufacturingDetailsArray:', [...new Set(duplicates)]);
+      }
+    }
+    
+    if (product.additionalInfoArray?.length) {
+      const labels = product.additionalInfoArray.map(d => d.label);
+      const duplicates = labels.filter((label, index) => labels.indexOf(label) !== index);
+      if (duplicates.length > 0) {
+        console.warn('⚠️ DUPLICATE LABELS in additionalInfoArray:', [...new Set(duplicates)]);
+      }
+    }
+    
+    console.log('=================================\n');
+    
     // Reset error states when product changes
     setIframeError(false);
     setShowFallback(false);
@@ -30,6 +61,46 @@ const GoldStandardPanel = ({ product = {} }) => {
     if (typeof data === 'object') return Object.keys(data).length > 0;
     return true;
   };
+
+  // Helper to remove duplicate entries based on label (keeps first occurrence)
+  const removeDuplicates = (array) => {
+    if (!Array.isArray(array)) return array;
+    
+    const seen = new Set();
+    return array.filter(item => {
+      const key = item.label;
+      if (seen.has(key)) {
+        return false;
+      }
+      seen.add(key);
+      return true;
+    });
+  };
+
+  // Helper to filter out fields already displayed elsewhere
+  const filterAlreadyDisplayedFields = (array) => {
+    if (!Array.isArray(array)) return array;
+    
+    // List of fields that are already shown in the UI (ASIN, Brand, etc.)
+    const fieldsToExclude = ['ASIN', 'Brand', 'brand', 'asin'];
+    
+    return array.filter(item => {
+      // Remove items whose label matches fields already displayed
+      const labelLower = item.label?.toLowerCase().trim();
+      return !fieldsToExclude.some(excluded => 
+        excluded.toLowerCase() === labelLower || 
+        labelLower.includes(excluded.toLowerCase())
+      );
+    });
+  };
+
+  // Deduplicate and filter arrays
+  const deduplicatedProductDetails = filterAlreadyDisplayedFields(removeDuplicates(product.productDetailsArray));
+  const deduplicatedManufacturingDetails = filterAlreadyDisplayedFields(removeDuplicates(product.manufacturingDetailsArray));
+  const deduplicatedAdditionalInfo = filterAlreadyDisplayedFields(removeDuplicates(product.additionalInfoArray));
+  
+  // Deduplicate features array
+  const deduplicatedFeatures = product.features ? [...new Set(product.features)] : [];
 
   if (showFallback || iframeError) {
     return (
@@ -125,14 +196,14 @@ const GoldStandardPanel = ({ product = {} }) => {
           )}
 
           {/* Feature Bullets */}
-          {hasData(product.features) && (
+          {hasData(deduplicatedFeatures) && (
             <div className="space-y-2">
               <div className="flex items-center space-x-2 text-gray-700">
                 <Package className="h-4 w-4" />
                 <h5 className="font-semibold text-sm">Key Features</h5>
               </div>
               <ul className="space-y-2">
-                {product.features.map((feature, index) => (
+                {deduplicatedFeatures.map((feature, index) => (
                   <li key={index} className="text-sm text-gray-700 flex items-start bg-green-50 p-2 rounded">
                     <span className="text-green-600 mr-2 font-bold">•</span>
                     <span>{feature}</span>
@@ -143,14 +214,14 @@ const GoldStandardPanel = ({ product = {} }) => {
           )}
 
           {/* Product Details Section */}
-          {hasData(product.productDetailsArray) && (
+          {hasData(deduplicatedProductDetails) && (
             <div className="space-y-2">
               <div className="flex items-center space-x-2 text-gray-700">
                 <Info className="h-4 w-4" />
                 <h5 className="font-semibold text-sm">Product Details</h5>
               </div>
               <div className="bg-blue-50 rounded-lg p-3 space-y-2">
-                {product.productDetailsArray.map((detail, index) => (
+                {deduplicatedProductDetails.map((detail, index) => (
                   <div key={index} className="flex justify-between text-sm border-b border-blue-100 pb-2 last:border-0">
                     <span className="text-gray-600 font-medium">{detail.label}</span>
                     <span className="text-gray-900 text-right flex-1 ml-2">{detail.value}</span>
@@ -161,14 +232,14 @@ const GoldStandardPanel = ({ product = {} }) => {
           )}
 
           {/* Manufacturing Details Section */}
-          {hasData(product.manufacturingDetailsArray) && (
+          {hasData(deduplicatedManufacturingDetails) && (
             <div className="space-y-2">
               <div className="flex items-center space-x-2 text-gray-700">
                 <Building2 className="h-4 w-4" />
                 <h5 className="font-semibold text-sm">Manufacturing Details</h5>
               </div>
               <div className="bg-amber-50 rounded-lg p-3 space-y-2">
-                {product.manufacturingDetailsArray.map((detail, index) => (
+                {deduplicatedManufacturingDetails.map((detail, index) => (
                   <div key={index} className="flex justify-between text-sm border-b border-amber-100 pb-2 last:border-0">
                     <span className="text-gray-600 font-medium">{detail.label}</span>
                     <span className="text-gray-900 text-right flex-1 ml-2">{detail.value}</span>
@@ -179,14 +250,14 @@ const GoldStandardPanel = ({ product = {} }) => {
           )}
 
           {/* Additional Info Section */}
-          {hasData(product.additionalInfoArray) && (
+          {hasData(deduplicatedAdditionalInfo) && (
             <div className="space-y-2">
               <div className="flex items-center space-x-2 text-gray-700">
                 <Info className="h-4 w-4" />
                 <h5 className="font-semibold text-sm">Additional Information</h5>
               </div>
               <div className="bg-purple-50 rounded-lg p-3 space-y-2">
-                {product.additionalInfoArray.map((detail, index) => (
+                {deduplicatedAdditionalInfo.map((detail, index) => (
                   <div key={index} className="flex justify-between text-sm border-b border-purple-100 pb-2 last:border-0">
                     <span className="text-gray-600 font-medium">{detail.label}:</span>
                     <span className="text-gray-900 text-right flex-1 ml-2">{detail.value}</span>
@@ -198,10 +269,10 @@ const GoldStandardPanel = ({ product = {} }) => {
 
           {/* No Data Warning */}
           {!product.description && 
-           !hasData(product.features) && 
-           !hasData(product.productDetailsArray) && 
-           !hasData(product.manufacturingDetailsArray) && 
-           !hasData(product.additionalInfoArray) && (
+           !hasData(deduplicatedFeatures) && 
+           !hasData(deduplicatedProductDetails) && 
+           !hasData(deduplicatedManufacturingDetails) && 
+           !hasData(deduplicatedAdditionalInfo) && (
             <div className="flex flex-col items-center justify-center py-8 text-center">
               <AlertTriangle className="h-12 w-12 text-amber-400 mb-3" />
               <p className="text-gray-600 font-medium">No detailed product information available</p>

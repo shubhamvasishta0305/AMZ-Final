@@ -1,20 +1,48 @@
 import { useParams, useLocation, useNavigate } from 'react-router-dom';
+import { useState, useEffect } from 'react';
 import { Package, LogOut, HelpCircle, Info } from 'lucide-react';
 
-const Navbar = ({ sellerId }) => {
-  // const { sellerId } = useParams();
+const Navbar = () => {
   const location = useLocation();
   const navigate = useNavigate();
+  const [sellerId, setSellerId] = useState('');
+  
+  // Listen for sellerId updates from localStorage and custom events
+  useEffect(() => {
+    // Initial load from localStorage
+    const storedSellerId = localStorage.getItem('sellerId');
+    if (storedSellerId) {
+      setSellerId(storedSellerId);
+    }
+
+    // Listen for custom sellerId update events
+    const handleSellerIdUpdate = (event) => {
+      setSellerId(event.detail);
+    };
+
+    // Listen for storage changes (from other tabs/windows)
+    const handleStorageChange = (e) => {
+      if (e.key === 'sellerId') {
+        setSellerId(e.newValue || '');
+      }
+    };
+
+    window.addEventListener('sellerIdUpdated', handleSellerIdUpdate);
+    window.addEventListener('storage', handleStorageChange);
+
+    return () => {
+      window.removeEventListener('sellerIdUpdated', handleSellerIdUpdate);
+      window.removeEventListener('storage', handleStorageChange);
+    };
+  }, []);
   
   // Show seller ID on pages that have it in the URL
   const showSellerId = true
 
   const showSellerInfo = location.pathname !== '/seller-list';
 
-
   const handleLogout = () => {
-    localStorage.removeItem('user');
-    localStorage.removeItem('sellerId');
+    localStorage.clear();
     navigate('/');
   };
 
