@@ -49,3 +49,11 @@ coverage
 
 # ESLint cache
 .eslintcache
+backend/google-cloud-sdk/
+*.tar.gz
+google-cloud-sdk/
+*.tar.gz
+*.json
+google-cloud-sdk/
+*.tar.gz
+*.json
