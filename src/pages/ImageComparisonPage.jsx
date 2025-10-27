@@ -165,97 +165,100 @@ const ImageComparisonPage = () => {
   ];
 
   const handleGenerateImage = async (index) => {
-    if (!referenceFile && !referenceImage) {
-      alert('Please upload or select a reference image first!');
-      return;
-    }
+  if (!referenceFile && !referenceImage) {
+    alert('Please upload or select a reference image first!');
+    return;
+  }
 
-    // Check if style index is not yet implemented on backend (indices 5 and 6)
-    if (index >= 5) {
-      alert('🚧 This image style is coming soon! Currently in development. Stay tuned! 🎨');
-      return;
-    }
+  // Check if style index is not yet implemented on backend (indices 5 and 6)
+  if (index >= 5) {
+    alert('🚧 This image style is coming soon! Currently in development. Stay tuned! 🎨');
+    return;
+  }
 
-    const imageType = imageLabels[index];
-    // Use index as style_index (0-6 for the 7 image slots)
-    const styleIndex = index;
+  const imageType = imageLabels[index];
+  const styleIndex = index;
+  
+  // Normalize attribute keys to match prompt template placeholders
+  const normalizedAttributes = {};
+  Object.entries(productAttributes).forEach(([key, value]) => {
+    if (key === 'Subcategory') {
+      normalizedAttributes['SubCategory'] = value;
+    } else if (key === 'Age Group') {
+      normalizedAttributes['AgeGroup'] = value;
+    } else {
+      normalizedAttributes[key] = value;
+    }
+  });
+  
+  console.log('🎨 Generating image with attributes:', normalizedAttributes);
+  
+  setGeneratedImages(prev =>
+    prev.map((img, i) =>
+      i === index ? { ...img, isLoading: true } : img
+    )
+  );
+
+  try {
+    let imageFile = referenceFile;
     
-    // Normalize attribute keys to match prompt template placeholders
-    // Convert filter keys like "Subcategory" -> "SubCategory", "Age Group" -> "AgeGroup"
-    const normalizedAttributes = {};
-    Object.entries(productAttributes).forEach(([key, value]) => {
-      // Handle specific key mappings
-      if (key === 'Subcategory') {
-        normalizedAttributes['SubCategory'] = value;
-      } else if (key === 'Age Group') {
-        normalizedAttributes['AgeGroup'] = value;
-      } else {
-        // Keep other keys as-is (Gender, Category, etc.)
-        normalizedAttributes[key] = value;
+    // If we have a referenceImage URL but no file, convert the URL to a File
+    if (!referenceFile && referenceImage) {
+      console.log('🔄 Converting reference image URL to File...');
+      try {
+        imageFile = await urlToFile(referenceImage, `reference-image-${Date.now()}.jpg`);
+        console.log('✅ Successfully converted reference image to File');
+      } catch (conversionError) {
+        console.error('❌ Failed to convert reference image:', conversionError);
+        throw new Error('Failed to process reference image. Please try uploading the image directly instead.');
       }
-    });
+    }
+
+    if (!imageFile) {
+      throw new Error('No reference image available for generation');
+    }
+
+    console.log('🚀 Calling generateAIImage with file:', imageFile);
     
-    console.log('🎨 Generating image with attributes:', normalizedAttributes);
+    // Call the real API with reference image file, style index, and attributes
+    const imageResult = await generateAIImage(imageFile, styleIndex, normalizedAttributes);
     
-    setGeneratedImages(prev => 
-      prev.map((img, i) => 
-        i === index ? { ...img, isLoading: true } : img
+    console.log('✅ Image generation result:', imageResult);
+    
+    // Update the generated images state
+    setGeneratedImages(prev =>
+      prev.map((img, i) =>
+        i === index ? { url: imageResult.url, isLoading: false } : img
       )
     );
-
-    try {
-      let imageFile = referenceFile;
-      
-      // If we have a referenceImage URL but no file, convert the URL to a File
-      if (!referenceFile && referenceImage) {
-        console.log('🔄 Converting reference image URL to File...');
-        try {
-          imageFile = await urlToFile(referenceImage, `reference-image-${Date.now()}.jpg`);
-          console.log('✅ Successfully converted reference image to File');
-        } catch (conversionError) {
-          console.error('❌ Failed to convert reference image:', conversionError);
-          throw new Error('Failed to process reference image. Please try uploading the image directly instead.');
-        }
-      }
-
-      if (!imageFile) {
-        throw new Error('No reference image available for generation');
-      }
-
-      console.log('🚀 Calling generateAIImage with file:', imageFile);
-      
-      // Call the real API with reference image file, style index, and attributes
-      const newImageUrl = await generateAIImage(imageFile, styleIndex, normalizedAttributes);
-      setGeneratedImages(prev => 
-        prev.map((img, i) => 
-          i === index ? { url: newImageUrl, isLoading: false } : img
-        )
-      );
-    } catch (error) {
-      console.error('Error generating image:', error);
-      
-      // Provide more helpful error messages
-      let errorMessage = error.message;
-      if (errorMessage.includes('No image returned from model')) {
-        errorMessage = 'The AI model could not generate this image. This might be due to content safety filters or prompt issues. Please try a different style or image.';
-      } else if (errorMessage.includes('style_index out of range')) {
-        errorMessage = 'This image style is not yet available. Please try another style.';
-      } else if (errorMessage.includes('safety filters')) {
-        errorMessage = 'Content generation was blocked by safety filters. Please try a different reference image or style.';
-      } else if (errorMessage.includes('No image uploaded')) {
-        errorMessage = 'Reference image processing failed. Please try uploading the image directly or select a different existing image.';
-      } else if (errorMessage.includes('Failed to process reference image')) {
-        errorMessage = error.message; // Use the specific error message from conversion
-      }
-      
-      alert(`Failed to generate image: ${errorMessage}`);
-      setGeneratedImages(prev => 
-        prev.map((img, i) => 
-          i === index ? { ...img, isLoading: false } : img
-        )
-      );
+    
+    console.log('✅ Image generated successfully');
+  } catch (error) {
+    console.error('Error generating image:', error);
+    
+    // Provide more helpful error messages
+    let errorMessage = error.message;
+    if (errorMessage.includes('No image returned from model')) {
+      errorMessage = 'The AI model could not generate this image. This might be due to content safety filters or prompt issues. Please try a different style or image.';
+    } else if (errorMessage.includes('style_index out of range')) {
+      errorMessage = 'This image style is not yet available. Please try another style.';
+    } else if (errorMessage.includes('safety filters')) {
+      errorMessage = 'Content generation was blocked by safety filters. Please try a different reference image or style.';
+    } else if (errorMessage.includes('No image uploaded')) {
+      errorMessage = 'Reference image processing failed. Please try uploading the image directly or select a different existing image.';
+    } else if (errorMessage.includes('Failed to process reference image')) {
+      errorMessage = error.message;
     }
-  };
+    
+    alert(`Failed to generate image: ${errorMessage}`);
+    setGeneratedImages(prev =>
+      prev.map((img, i) =>
+        i === index ? { ...img, isLoading: false } : img
+      )
+    );
+  }
+};
+
 
   const handleReferenceImageUpload = (event) => {
     const file = event.target.files[0];
