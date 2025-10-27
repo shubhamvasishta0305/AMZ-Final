@@ -57,3 +57,7 @@ google-cloud-sdk/
 google-cloud-sdk/
 *.tar.gz
 *.json
+
+# Ignore large binaries and SDKs
+google-cloud-sdk/
+backend/google-cloud-sdk-367.0.0-linux-x86_64.tar.gz
