@@ -1,9 +1,11 @@
 // Page 5: Image Comparison and AI Generation Page
 
+
 import { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { generateAIImage } from '../api/api';
 import { Wand2, Loader2, ArrowRight, X, Upload, Download, Link, Images } from 'lucide-react';
+
 
 const ImageComparisonPage = () => {
   const navigate = useNavigate();
@@ -16,16 +18,40 @@ const ImageComparisonPage = () => {
   const [existingProduct, setExistingProduct] = useState(null);
   // Get isNewProduct from navigation state
   const [isNewProduct, setIsNewProduct] = useState(location.state?.isNewProduct || false);
-  
   // New state for existing images dialog
   const [showExistingImagesDialog, setShowExistingImagesDialog] = useState(false);
+
+
+  // Random loading messages for AI generation
+  const loadingMessages = [
+    "🎨 Painting pixels...",
+    "✨ Creating magic...",
+    "🎭 Crafting your image...",
+    "🌟 Generating masterpiece...",
+    "🔮 Conjuring visuals...",
+    "🖼️ Building your vision...",
+    "🌈 Adding colors...",
+    "🎯 Focusing creativity...",
+    "🚀 Launching generation...",
+    "🎨 Mixing digital paint...",
+    "🔥 Rendering pixels...",
+    "🌸 Blooming your image...",
+    "🌊 Flowing with creativity...",
+    "⭐ Shining up pixels...",
+  ];
+
+
+  const [currentLoadingMessage, setCurrentLoadingMessage] = useState("");
+  const [isGeneratingAll, setIsGeneratingAll] = useState(false);
+
 
   // Load product data from localStorage on component mount
   useEffect(() => {
     // Check if coming from new product page via navigation state
     if (location.state?.isNewProduct) {
-      console.log('✅ Coming from new product page - hiding existing product section');
+      console.log('âœ… Coming from new product page - hiding existing product section');
     }
+
 
     // Load product attributes/filters
     const storedFilters = localStorage.getItem('productFilters');
@@ -33,11 +59,12 @@ const ImageComparisonPage = () => {
       try {
         const filters = JSON.parse(storedFilters);
         setProductAttributes(filters);
-        console.log('✅ Loaded product attributes from localStorage:', filters);
+        console.log('âœ… Loaded product attributes from localStorage:', filters);
       } catch (error) {
         console.error('Error parsing stored filters:', error);
       }
     }
+
 
     // Load gold standard product
     const storedGoldStandard = localStorage.getItem('goldStandardProduct');
@@ -45,11 +72,12 @@ const ImageComparisonPage = () => {
       try {
         const goldProduct = JSON.parse(storedGoldStandard);
         setGoldStandardProduct(goldProduct);
-        console.log('✅ Loaded gold standard product from localStorage:', goldProduct);
+        console.log('âœ… Loaded gold standard product from localStorage:', goldProduct);
       } catch (error) {
         console.error('Error parsing stored gold standard product:', error);
       }
     }
+
 
     // Load existing product only if not coming from new product page
     if (!location.state?.isNewProduct) {
@@ -58,7 +86,7 @@ const ImageComparisonPage = () => {
         try {
           const existing = JSON.parse(storedExisting);
           setExistingProduct(existing);
-          console.log('✅ Loaded existing product from localStorage:', existing);
+          console.log('âœ… Loaded existing product from localStorage:', existing);
         } catch (error) {
           console.error('Error parsing stored existing product:', error);
         }
@@ -66,48 +94,51 @@ const ImageComparisonPage = () => {
     }
   }, [location.state]);
 
+
   // Get images from loaded products (up to 7 images each)
   const getGoldStandardImages = () => {
     const emptyArray = Array(7).fill(null);
-    
+
     if (goldStandardProduct && goldStandardProduct.images && goldStandardProduct.images.length > 0) {
       // Filter out duplicates by using Set with image URLs
       const uniqueImages = [...new Set(goldStandardProduct.images)];
       const images = uniqueImages.slice(0, 7);
-      
-      console.log('📸 Gold Standard - Total images:', goldStandardProduct.images.length, 'Unique images:', uniqueImages.length);
-      
+
+      console.log('ðŸ“¸ Gold Standard - Total images:', goldStandardProduct.images.length, 'Unique images:', uniqueImages.length);
+
       // Pad with null if less than 7
       while (images.length < 7) {
         images.push(null);
       }
       return images;
     }
-    
-    console.log('⚠️ No gold standard images found, returning empty array');
+
+    console.log('âš ï¸ No gold standard images found, returning empty array');
     return emptyArray; // Return empty array if no images
   };
 
+
   const getExistingImages = () => {
     const emptyArray = Array(7).fill(null);
-    
+
     if (existingProduct && existingProduct.images && existingProduct.images.length > 0) {
       // Filter out duplicates by using Set with image URLs
       const uniqueImages = [...new Set(existingProduct.images)];
       const images = uniqueImages.slice(0, 7);
-      
-      console.log('📸 Existing Product - Total images:', existingProduct.images.length, 'Unique images:', uniqueImages.length);
-      
+
+      console.log('ðŸ“¸ Existing Product - Total images:', existingProduct.images.length, 'Unique images:', uniqueImages.length);
+
       // Pad with null if less than 7
       while (images.length < 7) {
         images.push(null);
       }
       return images;
     }
-    
-    console.log('⚠️ No existing product images found, returning empty array');
+
+    console.log('âš ï¸ No existing product images found, returning empty array');
     return emptyArray; // Return empty array if no images
   };
+
 
   // Get all unique existing images for the dialog
   const getAllExistingImages = () => {
@@ -119,145 +150,308 @@ const ImageComparisonPage = () => {
     return [];
   };
 
+
   // Function to convert image URL to File object
   const urlToFile = async (imageUrl, filename) => {
     try {
-      console.log('🔄 Converting URL to File:', imageUrl);
-      
+      console.log('ðŸ”„ Converting URL to File:', imageUrl);
+
       // Fetch the image
       const response = await fetch(imageUrl);
       if (!response.ok) {
         throw new Error(`Failed to fetch image: ${response.status}`);
       }
-      
+
       // Get the image as blob
       const blob = await response.blob();
-      
+
       // Create a File object from the blob
-      const file = new File([blob], filename, { 
+      const file = new File([blob], filename, {
         type: blob.type || 'image/jpeg',
         lastModified: Date.now()
       });
-      
-      console.log('✅ Successfully converted URL to File:', file);
+
+      console.log('âœ… Successfully converted URL to File:', file);
       return file;
     } catch (error) {
-      console.error('❌ Error converting URL to File:', error);
+      console.error('âŒ Error converting URL to File:', error);
       throw error;
     }
   };
+
 
   const [generatedImages, setGeneratedImages] = useState(
     Array(7).fill(null).map(() => ({ url: null, isLoading: false }))
   );
 
+
   // Track which image is selected per row (0 = existing, 1 = generated)
   const [selectedImages, setSelectedImages] = useState(Array(7).fill(null));
+
 
   const imageLabels = [
     'Main Product',
     'Front View',
-    'Back View', 
+    'Back View',
     'Side View',
     'Detail Shot 1',
     'Detail Shot 2',
     'Lifestyle'
   ];
 
-  const handleGenerateImage = async (index) => {
-  if (!referenceFile && !referenceImage) {
-    alert('Please upload or select a reference image first!');
-    return;
-  }
 
-  // Check if style index is not yet implemented on backend (indices 5 and 6)
-  if (index >= 5) {
-    alert('🚧 This image style is coming soon! Currently in development. Stay tuned! 🎨');
-    return;
-  }
-
-  const imageType = imageLabels[index];
-  const styleIndex = index;
-  
-  // Normalize attribute keys to match prompt template placeholders
-  const normalizedAttributes = {};
-  Object.entries(productAttributes).forEach(([key, value]) => {
-    if (key === 'Subcategory') {
-      normalizedAttributes['SubCategory'] = value;
-    } else if (key === 'Age Group') {
-      normalizedAttributes['AgeGroup'] = value;
-    } else {
-      normalizedAttributes[key] = value;
+  const handleGenerateAll = async () => {
+    if (!referenceFile) {
+      alert('Please upload a reference image first!');
+      return;
     }
-  });
-  
-  console.log('🎨 Generating image with attributes:', normalizedAttributes);
-  
-  setGeneratedImages(prev =>
-    prev.map((img, i) =>
-      i === index ? { ...img, isLoading: true } : img
-    )
-  );
 
-  try {
-    let imageFile = referenceFile;
-    
-    // If we have a referenceImage URL but no file, convert the URL to a File
-    if (!referenceFile && referenceImage) {
-      console.log('🔄 Converting reference image URL to File...');
-      try {
-        imageFile = await urlToFile(referenceImage, `reference-image-${Date.now()}.jpg`);
-        console.log('✅ Successfully converted reference image to File');
-      } catch (conversionError) {
-        console.error('❌ Failed to convert reference image:', conversionError);
-        throw new Error('Failed to process reference image. Please try uploading the image directly instead.');
+
+    setIsGeneratingAll(true);
+
+
+    // Normalize attributes once
+    const normalizedAttributes = {};
+    Object.entries(productAttributes).forEach(([key, value]) => {
+      if (key === 'Subcategory') {
+        normalizedAttributes['SubCategory'] = value;
+      } else if (key === 'Age Group') {
+        normalizedAttributes['AgeGroup'] = value;
+      } else {
+        normalizedAttributes[key] = value;
       }
-    }
+    });
 
-    if (!imageFile) {
-      throw new Error('No reference image available for generation');
-    }
 
-    console.log('🚀 Calling generateAIImage with file:', imageFile);
-    
-    // Call the real API with reference image file, style index, and attributes
-    const imageResult = await generateAIImage(imageFile, styleIndex, normalizedAttributes);
-    
-    console.log('✅ Image generation result:', imageResult);
-    
-    // Update the generated images state
+    // Set initial random loading message
+    const randomMessage = loadingMessages[Math.floor(Math.random() * loadingMessages.length)];
+    setCurrentLoadingMessage(randomMessage);
+
+
+    // Start interval to change loading message every 2 seconds
+    const messageInterval = setInterval(() => {
+      const newMessage = loadingMessages[Math.floor(Math.random() * loadingMessages.length)];
+      setCurrentLoadingMessage(newMessage);
+    }, 2000);
+
+
+    // Set all first 5 images to loading state
     setGeneratedImages(prev =>
       prev.map((img, i) =>
-        i === index ? { url: imageResult.url, isLoading: false } : img
+        i < 5 && !img.url ? { ...img, isLoading: true } : img
       )
     );
-    
-    console.log('✅ Image generated successfully');
-  } catch (error) {
-    console.error('Error generating image:', error);
-    
-    // Provide more helpful error messages
-    let errorMessage = error.message;
-    if (errorMessage.includes('No image returned from model')) {
-      errorMessage = 'The AI model could not generate this image. This might be due to content safety filters or prompt issues. Please try a different style or image.';
-    } else if (errorMessage.includes('style_index out of range')) {
-      errorMessage = 'This image style is not yet available. Please try another style.';
-    } else if (errorMessage.includes('safety filters')) {
-      errorMessage = 'Content generation was blocked by safety filters. Please try a different reference image or style.';
-    } else if (errorMessage.includes('No image uploaded')) {
-      errorMessage = 'Reference image processing failed. Please try uploading the image directly or select a different existing image.';
-    } else if (errorMessage.includes('Failed to process reference image')) {
-      errorMessage = error.message;
+
+
+    // Generate first 5 images simultaneously using Promise.allSettled
+    const generationPromises = [];
+    for (let index = 0; index < 5; index++) {
+      // Skip if already generated
+      if (generatedImages[index].url) {
+        console.log(`â­ï¸ Skipping index ${index} - already generated`);
+        generationPromises.push(Promise.resolve({ index, skipped: true }));
+        continue;
+      }
+
+
+      console.log(`ðŸŽ¨ Starting generation for image ${index + 1}/5 with attributes:`, normalizedAttributes);
+
+      // Create promise for each image generation
+      const promise = generateAIImage(referenceFile, index, normalizedAttributes)
+        .then(newImageUrl => ({
+          index,
+          url: newImageUrl,
+          success: true
+        }))
+        .catch(error => ({
+          index,
+          error: error.message,
+          success: false
+        }));
+
+      generationPromises.push(promise);
     }
-    
-    alert(`Failed to generate image: ${errorMessage}`);
+
+
+    // Wait for all generations to complete
+    const results = await Promise.allSettled(generationPromises);
+
+
+    // Clear the message interval
+    clearInterval(messageInterval);
+
+
+    // Process results and update state
+    let successCount = 0;
+    let failCount = 0;
+
+
+    results.forEach((result) => {
+      if (result.status === 'fulfilled') {
+        const data = result.value;
+
+        if (data.skipped) {
+          // Already generated, skip
+          return;
+        }
+
+        if (data.success && data.url) {
+          // Successfully generated
+          setGeneratedImages(prev =>
+            prev.map((img, i) =>
+              i === data.index ? { url: data.url, isLoading: false } : img
+            )
+          );
+          successCount++;
+          console.log(`âœ… Successfully generated image ${data.index + 1}`);
+        } else {
+          // Failed to generate
+          setGeneratedImages(prev =>
+            prev.map((img, i) =>
+              i === data.index ? { ...img, isLoading: false } : img
+            )
+          );
+          failCount++;
+          console.error(`âŒ Failed to generate image ${data.index + 1}: ${data.error}`);
+        }
+      } else {
+        // Promise rejected
+        console.error('âŒ Generation promise rejected:', result.reason);
+        failCount++;
+      }
+    });
+
+
+    setIsGeneratingAll(false);
+
+
+    // Show summary alert
+    if (failCount === 0) {
+      // alert(`âœ… Batch generation complete! Successfully generated ${successCount} images.`);
+    } else {
+      alert(`âš ï¸ Batch generation complete!\nâœ… Success: ${successCount} images\nâŒ Failed: ${failCount} images`);
+    }
+  };
+
+
+  const handleGenerateImage = async (index) => {
+    if (!referenceFile && !referenceImage) {
+      alert('Please upload or select a reference image first!');
+      return;
+    }
+
+
+    // Check if style index is not yet implemented on backend (indices 5 and 6)
+    if (index >= 5) {
+      alert('ðŸš§ This image style is coming soon! Currently in development. Stay tuned! ðŸŽ¨');
+      return;
+    }
+
+
+    const imageType = imageLabels[index];
+    // Use index as style_index (0-6 for the 7 image slots)
+    const styleIndex = index;
+
+    // Normalize attribute keys to match prompt template placeholders
+    // Convert filter keys like "Subcategory" -> "SubCategory", "Age Group" -> "AgeGroup"
+    const normalizedAttributes = {};
+    Object.entries(productAttributes).forEach(([key, value]) => {
+      // Handle specific key mappings
+      if (key === 'Subcategory') {
+        normalizedAttributes['SubCategory'] = value;
+      } else if (key === 'Age Group') {
+        normalizedAttributes['AgeGroup'] = value;
+      } else {
+        // Keep other keys as-is (Gender, Category, etc.)
+        normalizedAttributes[key] = value;
+      }
+    });
+
+    console.log('ðŸŽ¨ Generating image with attributes:', normalizedAttributes);
+
+    // Set initial random loading message
+    const randomMessage = loadingMessages[Math.floor(Math.random() * loadingMessages.length)];
+    setCurrentLoadingMessage(randomMessage);
+
     setGeneratedImages(prev =>
       prev.map((img, i) =>
-        i === index ? { ...img, isLoading: false } : img
+        i === index ? { ...img, isLoading: true } : img
       )
     );
-  }
-};
+
+
+    // Start interval to change loading message every 2 seconds
+    const messageInterval = setInterval(() => {
+      const newMessage = loadingMessages[Math.floor(Math.random() * loadingMessages.length)];
+      setCurrentLoadingMessage(newMessage);
+    }, 2000);
+
+
+    try {
+      let imageFile = referenceFile;
+
+      // If we have a referenceImage URL but no file, convert the URL to a File
+      if (!referenceFile && referenceImage) {
+        console.log('ðŸ”„ Converting reference image URL to File...');
+        try {
+          imageFile = await urlToFile(referenceImage, `reference-image-${Date.now()}.jpg`);
+          console.log('âœ… Successfully converted reference image to File');
+        } catch (conversionError) {
+          console.error('âŒ Failed to convert reference image:', conversionError);
+          throw new Error('Failed to process reference image. Please try uploading the image directly instead.');
+        }
+      }
+
+
+      if (!imageFile) {
+        throw new Error('No reference image available for generation');
+      }
+
+
+      console.log('ðŸš€ Calling generateAIImage with file:', imageFile);
+
+      // Call the real API with reference image file, style index, and attributes
+      const newImageUrl = await generateAIImage(referenceFile, styleIndex, normalizedAttributes);
+
+      // Clear the interval when done
+      clearInterval(messageInterval);
+
+      setGeneratedImages(prev =>
+        prev.map((img, i) =>
+          i === index ? { url: newImageUrl, isLoading: false } : img
+        )
+      );
+    } catch (error) {
+      // Clear the interval on error too
+      clearInterval(messageInterval);
+      console.error('Error generating image:', error);
+
+      // Provide more helpful error messages
+      let errorMessage = error.message;
+      if (errorMessage.includes('No image returned from model')) {
+        errorMessage = 'The AI model could not generate this image. This might be due to content safety filters or prompt issues. Please try a different style or image.';
+      } else if (errorMessage.includes('style_index out of range')) {
+        errorMessage = 'This image style is not yet available. Please try another style.';
+      } else if (errorMessage.includes('safety filters')) {
+        errorMessage = 'Content generation was blocked by safety filters. Please try a different reference image or style.';
+      } else if (errorMessage.includes('No image uploaded')) {
+        errorMessage = 'Reference image processing failed. Please try uploading the image directly or select a different existing image.';
+      } else if (errorMessage.includes('Failed to process reference image')) {
+        errorMessage = error.message; // Use the specific error message from conversion
+      }
+
+      alert(`Failed to generate image: ${errorMessage}`);
+
+      // Clear the interval on error
+      clearInterval(messageInterval);
+
+      setGeneratedImages(prev =>
+        prev.map((img, i) =>
+          i === index ? { ...img, isLoading: false } : img
+        )
+      );
+    }
+  };
 
 
   const handleReferenceImageUpload = (event) => {
@@ -269,34 +463,37 @@ const ImageComparisonPage = () => {
         setReferenceImage(e.target.result);
       };
       reader.readAsDataURL(file);
-      console.log('✅ Reference image uploaded:', file.name);
+      console.log('âœ… Reference image uploaded:', file.name);
     }
   };
 
+
   const handleSelectExistingImage = async (imageUrl) => {
     try {
-      console.log('🔄 Selecting existing image as reference:', imageUrl);
-      
+      console.log('ðŸ”„ Selecting existing image as reference:', imageUrl);
+
       // Convert the selected image URL to a File object
       const file = await urlToFile(imageUrl, `existing-reference-${Date.now()}.jpg`);
-      
+
       // Set both the file and the image URL for display
       setReferenceFile(file);
       setReferenceImage(imageUrl);
       setShowExistingImagesDialog(false);
-      
-      console.log('✅ Successfully set existing image as reference');
+
+      console.log('âœ… Successfully set existing image as reference');
     } catch (error) {
-      console.error('❌ Failed to select existing image:', error);
+      console.error('âŒ Failed to select existing image:', error);
       alert('Failed to select this image as reference. Please try uploading the image directly or select a different image.');
     }
   };
 
+
   const handleRemoveReferenceImage = () => {
     setReferenceImage(null);
     setReferenceFile(null);
-    console.log('🗑️ Reference image removed');
+    console.log('ðŸ—‘ï¸ Reference image removed');
   };
+
 
   const handleDownloadImage = (imageUrl, imageName) => {
     try {
@@ -315,6 +512,7 @@ const ImageComparisonPage = () => {
     }
   };
 
+
   const handleCopyImageLink = (imageUrl) => {
     navigator.clipboard.writeText(imageUrl).then(() => {
       alert('Image link copied to clipboard!');
@@ -324,41 +522,51 @@ const ImageComparisonPage = () => {
     });
   };
 
+
   const handleImageSelection = (rowIndex, imageType) => {
     // imageType: 0 = existing, 1 = generated
     const newSelection = [...selectedImages];
-    
+
     // Toggle selection: if clicking on already selected, deselect it
     if (newSelection[rowIndex] === imageType) {
       newSelection[rowIndex] = null;
     } else {
       newSelection[rowIndex] = imageType;
     }
-    
+
     setSelectedImages(newSelection);
-    console.log(`🖱️ Row ${rowIndex} selection changed to:`, imageType === 0 ? 'existing' : 'generated');
+    console.log(`ðŸ–±ï¸ Row ${rowIndex} selection changed to:`, imageType === 0 ? 'existing' : 'generated');
   };
 
+
   const handleSaveChanges = () => {
-    // For new products: require all 7 images to be generated
+    // For new products: require at least 5 images, max 7
     if (isNewProduct) {
       const generatedCount = generatedImages.filter(img => img.url !== null).length;
-      if (generatedCount < 7) {
-        alert(`⚠️ Please generate all 7 images before proceeding. Currently generated: ${generatedCount}/7`);
+      if (generatedCount < 5) {
+        alert(`âš ï¸ Please generate at least 5 images before proceeding. Currently generated: ${generatedCount}/7`);
+        return;
+      }
+      if (generatedCount > 7) {
+        alert(`âš ï¸ Maximum 7 images allowed. Currently generated: ${generatedCount}`);
         return;
       }
     } else {
-      // For existing products: require exactly 7 selections (one per row)
+      // For existing products: require at least 5 selections, max 7
       const selectedCount = selectedImages.filter(sel => sel !== null).length;
-      if (selectedCount < 7) {
-        alert(`⚠️ Please select one image per row (7 total). Currently selected: ${selectedCount}/7`);
+      if (selectedCount < 5) {
+        alert(`âš ï¸ Please select at least 5 images before proceeding. Currently selected: ${selectedCount}/7`);
+        return;
+      }
+      if (selectedCount > 7) {
+        alert(`âš ï¸ Maximum 7 selections allowed. Currently selected: ${selectedCount}`);
         return;
       }
     }
-    
+
     const allImages = [];
     const generatedImageUrls = [];
-    
+
     if (isNewProduct) {
       // For new products: collect all generated images
       generatedImages.forEach((imgData, index) => {
@@ -374,7 +582,7 @@ const ImageComparisonPage = () => {
     } else {
       // For existing products: collect only selected images
       const existingImages = getExistingImages();
-      
+
       selectedImages.forEach((selection, index) => {
         if (selection === 0) {
           // User selected existing image
@@ -400,42 +608,42 @@ const ImageComparisonPage = () => {
         }
       });
     }
-    
-    console.log('📦 Selected/Generated images:', allImages.length);
-    console.log('🎨 Generated images only:', generatedImageUrls.length);
-    console.log('📋 All images data:', allImages);
-    
+
+    console.log('ðŸ“¦ Selected/Generated images:', allImages.length);
+    console.log('ðŸŽ¨ Generated images only:', generatedImageUrls.length);
+    console.log('ðŸ“‹ All images data:', allImages);
+
     // Save both to localStorage
     localStorage.setItem('generatedImages', JSON.stringify(generatedImageUrls));
     localStorage.setItem('allProductImages', JSON.stringify(allImages));
-    
+
     // Navigate to final page
     navigate('/final-page');
   };
 
+
   const ImageCard = ({ src, alt, label, type, index = null, onGenerate = null, isLoading = false, isSelected = false, onSelect = null }) => (
-    <div className={`bg-white rounded-md border-2 overflow-hidden mb-2 transition-all ${
-      isSelected ? 'border-green-500 shadow-lg ring-2 ring-green-300' : 'border-gray-200'
-    } ${onSelect && src ? 'cursor-pointer hover:border-blue-300' : ''}`}
-    onClick={() => onSelect && src && !isLoading && onSelect()}
+    <div className={`bg-white rounded-md border-2 overflow-hidden mb-2 transition-all ${isSelected ? 'border-green-500 shadow-lg ring-2 ring-green-300' : 'border-gray-200'
+      } ${onSelect && src ? 'cursor-pointer hover:border-blue-300' : ''}`}
+      onClick={() => onSelect && src && !isLoading && onSelect()}
     >
       <div className="aspect-square bg-gray-50 flex items-center justify-center relative">
         {/* Selection indicator */}
         {isSelected && (
           <div className="absolute top-1 right-1 bg-green-500 text-white rounded-full p-1 z-20 shadow-lg">
             <svg className="h-4 w-4" fill="currentColor" viewBox="0 0 20 20">
-              <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd"/>
+              <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
             </svg>
           </div>
         )}
-        
+
         {/* For reference/current types with no image */}
         {(type === 'reference' || type === 'current') && !src && (
           <div className="flex flex-col items-center justify-center p-3 text-center">
             <div className="text-gray-400 text-xs">No image</div>
           </div>
         )}
-        
+
         {/* For generate type - show generate button when no image */}
         {type === 'generate' && !src && !isLoading && (
           <button
@@ -449,15 +657,15 @@ const ImageComparisonPage = () => {
             <span className="text-xs font-medium text-gray-700">Generate</span>
           </button>
         )}
-        
+
         {/* Loading state */}
         {isLoading && (
           <div className="flex flex-col items-center justify-center p-3 text-center">
             <Loader2 className="h-5 w-5 text-blue-600 animate-spin mb-1" />
-            <span className="text-xs font-medium text-gray-700">Generating...</span>
+            <span className="text-xs font-medium text-gray-700">{currentLoadingMessage}</span>
           </div>
         )}
-        
+
         {/* Show image when available */}
         {src && !isLoading && (
           <>
@@ -515,23 +723,24 @@ const ImageComparisonPage = () => {
         <h4 className="text-xs font-medium text-gray-900 text-center">{label}</h4>
         {onSelect && src && !isLoading && (
           <p className="text-xs text-center text-gray-500 mt-1">
-            {isSelected ? '✓ Selected' : 'Click to select'}
+            {isSelected ? 'Selected' : 'Click to select'}
           </p>
         )}
       </div>
     </div>
   );
 
+
   // Existing Images Dialog Component
   const ExistingImagesDialog = () => {
     const existingImages = getAllExistingImages();
-    
+
     return (
-      <div 
+      <div
         className="fixed inset-0 flex items-center justify-center z-50 p-4 bg-black bg-opacity-50"
         onClick={() => setShowExistingImagesDialog(false)}
       >
-        <div 
+        <div
           className="relative bg-white rounded-xl shadow-2xl max-w-4xl w-full max-h-[85vh] overflow-hidden border-4 border-blue-500 animate-scaleIn"
           onClick={(e) => e.stopPropagation()}
         >
@@ -549,7 +758,7 @@ const ImageComparisonPage = () => {
               <X className="h-6 w-6" />
             </button>
           </div>
-          
+
           <div className="p-6 bg-gray-50 max-h-[65vh] overflow-y-auto">
             {existingImages.length > 0 ? (
               <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
@@ -583,7 +792,7 @@ const ImageComparisonPage = () => {
               </div>
             )}
           </div>
-          
+
           <div className="flex items-center justify-between p-4 border-t border-gray-200 bg-gray-50">
             <span className="text-sm text-gray-600">
               {existingImages.length} image(s) available
@@ -600,15 +809,16 @@ const ImageComparisonPage = () => {
     );
   };
 
+
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Preview Modal */}
       {previewImage && (
-        <div 
+        <div
           className="fixed inset-0 flex items-center justify-center z-50 p-4"
           onClick={() => setPreviewImage(null)}
         >
-          <div 
+          <div
             className="relative bg-white rounded-xl shadow-2xl max-w-4xl w-full max-h-[85vh] overflow-hidden border-4 border-blue-500 animate-scaleIn"
             onClick={(e) => e.stopPropagation()}
           >
@@ -635,8 +845,10 @@ const ImageComparisonPage = () => {
         </div>
       )}
 
+
       {/* Existing Images Dialog */}
       {showExistingImagesDialog && <ExistingImagesDialog />}
+
 
       <div className="max-w-7xl mx-auto px-4 py-4">
         {/* Header */}
@@ -657,14 +869,15 @@ const ImageComparisonPage = () => {
           )}
         </div>
 
+
         {/* Reference Image Upload Section */}
         <div className="bg-gradient-to-r from-purple-50 to-blue-50 rounded-lg shadow-md border-2 border-purple-300 p-4 mb-4">
           <div className="flex items-center justify-between">
             <div className="flex-1">
               <h3 className="text-base font-bold text-gray-900 mb-1">Reference Image for AI Generation</h3>
               <p className="text-xs text-gray-600">
-                {referenceImage 
-                  ? 'Reference image selected. You can now generate AI images.' 
+                {referenceImage
+                  ? 'Reference image selected. You can now generate AI images.'
                   : 'Upload a reference image or select from existing images to guide the AI generation process'
                 }
               </p>
@@ -672,14 +885,14 @@ const ImageComparisonPage = () => {
                 <div className="mt-2 flex items-center space-x-2 text-xs">
                   <div className="bg-green-100 text-green-800 px-2 py-1 rounded flex items-center">
                     <svg className="h-3 w-3 mr-1" fill="currentColor" viewBox="0 0 20 20">
-                      <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd"/>
+                      <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
                     </svg>
                     Ready for AI Generation
                   </div>
                 </div>
               )}
             </div>
-            
+
             <div className="flex items-center space-x-3">
               {!referenceImage ? (
                 <>
@@ -746,15 +959,29 @@ const ImageComparisonPage = () => {
           </div>
         </div>
 
+
         {/* Two or Three Column Layout with Overall Border */}
         <div className="bg-white rounded-lg shadow-lg border-2 border-gray-300 p-4">
           {isNewProduct ? (
             // New Product: Two columns layout (Gold Standard + AI Generated)
             <div>
               <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-4">
-                <p className="text-sm text-blue-900 text-center font-medium">
-                  ⚠️ For new products, please generate all 7 images before proceeding
-                </p>
+                <div className="flex items-center justify-between">
+                  <p className="text-sm text-blue-900 font-medium">
+                    âš ï¸ For new products, generate at least 5 images (max 7)
+                  </p>
+                  <button
+                    onClick={handleGenerateAll}
+                    disabled={isGeneratingAll || !referenceFile}
+                    className={`flex items-center space-x-2 px-4 py-2 rounded-md transition-colors text-sm font-semibold ${isGeneratingAll || !referenceFile
+                      ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                      : 'bg-gradient-to-r from-purple-600 to-blue-600 text-white hover:from-purple-700 hover:to-blue-700 shadow-md'
+                      }`}
+                  >
+                    <Wand2 className={`h-4 w-4 ${isGeneratingAll ? 'animate-spin' : ''}`} />
+                    <span>{isGeneratingAll ? 'Generating All...' : 'Generate All'}</span>
+                  </button>
+                </div>
               </div>
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                 {/* Gold Standard Images */}
@@ -776,11 +1003,12 @@ const ImageComparisonPage = () => {
                   </div>
                 </div>
 
+
                 {/* AI Generated Images */}
                 <div className="border-2 border-blue-300 rounded-lg p-3">
                   <div className="text-center mb-3">
                     <h2 className="text-base font-bold text-gray-900 mb-1">AI Generated Images</h2>
-                    <p className="text-xs text-gray-600">Create optimized alternatives</p>
+                    <p className="text-xs text-gray-600">Create optimized alternatives (min 5, max 7)</p>
                     <div className="mt-2 inline-block bg-blue-100 text-blue-700 px-3 py-1 rounded-full text-xs font-medium">
                       {generatedImages.filter(img => img.url !== null).length} / 7 Generated
                     </div>
@@ -805,18 +1033,42 @@ const ImageComparisonPage = () => {
           ) : (
             // Existing Product: Row-based selection layout
             <div>
+              <div className="bg-green-50 border border-green-200 rounded-lg p-3 mb-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm text-green-900 font-medium">
+                      âš ï¸ Select at least 5 images (max 7)
+                    </p>
+                    <p className="text-xs text-green-700 mt-1">
+                      Selected: {selectedImages.filter(sel => sel !== null).length} / 7
+                    </p>
+                  </div>
+                  <button
+                    onClick={handleGenerateAll}
+                    disabled={isGeneratingAll || !referenceFile}
+                    className={`flex items-center space-x-2 px-4 py-2 rounded-md transition-colors text-sm font-semibold ${isGeneratingAll || !referenceFile
+                      ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                      : 'bg-gradient-to-r from-purple-600 to-blue-600 text-white hover:from-purple-700 hover:to-blue-700 shadow-md'
+                      }`}
+                  >
+                    <Wand2 className={`h-4 w-4 ${isGeneratingAll ? 'animate-spin' : ''}`} />
+                    <span>{isGeneratingAll ? 'Generating All...' : 'Generate All'}</span>
+                  </button>
+                </div>
+              </div>
+
               <div className="space-y-4">
                 {imageLabels.map((label, index) => {
                   const existingImg = getExistingImages()[index];
                   const generatedImg = generatedImages[index];
-                  
+
                   return (
                     <div key={`row-${index}`} className="bg-gray-50 border-2 border-gray-300 rounded-lg p-3">
                       <div className="text-center mb-2">
                         <h3 className="text-sm font-bold text-gray-900">{label}</h3>
                         <p className="text-xs text-gray-600">Select one image for this slot</p>
                       </div>
-                      
+
                       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                         {/* Gold Standard (reference only) */}
                         <div>
@@ -832,7 +1084,7 @@ const ImageComparisonPage = () => {
                             type="reference"
                           />
                         </div>
-                        
+
                         {/* Existing Image (selectable) */}
                         <div>
                           <div className="text-center mb-2">
@@ -848,7 +1100,7 @@ const ImageComparisonPage = () => {
                             onSelect={existingImg ? () => handleImageSelection(index, 0) : null}
                           />
                         </div>
-                        
+
                         {/* Generated Image (selectable) */}
                         <div>
                           <div className="text-center mb-2">
@@ -876,6 +1128,7 @@ const ImageComparisonPage = () => {
           )}
         </div>
 
+
         {/* Action Bar */}
         <div className="mt-4 bg-white rounded-lg shadow-sm border border-gray-200 p-3">
           <div className="flex items-center justify-between">
@@ -884,30 +1137,29 @@ const ImageComparisonPage = () => {
                 <>
                   <span className="font-medium">Generated Images:</span>
                   <span className="ml-2">
-                    {generatedImages.filter(img => img.url !== null).length} of {generatedImages.length} completed
+                    {generatedImages.filter(img => img.url !== null).length} of 7 (min 5 required)
                   </span>
                 </>
               ) : (
                 <>
                   <span className="font-medium">Selected Images:</span>
                   <span className="ml-2">
-                    {selectedImages.filter(sel => sel !== null).length} of 7 selected
+                    {selectedImages.filter(sel => sel !== null).length} of 7 (min 5 required)
                   </span>
                 </>
               )}
             </div>
             <button
               onClick={handleSaveChanges}
-              className={`flex items-center space-x-2 px-4 py-2 rounded-md transition-colors text-sm ${
-                (isNewProduct && generatedImages.filter(img => img.url !== null).length === 7) ||
-                (!isNewProduct && selectedImages.filter(sel => sel !== null).length === 7)
-                  ? 'bg-blue-600 text-white hover:bg-blue-700'
-                  : 'bg-gray-300 text-gray-500 cursor-not-allowed'
-              }`}
+              className={`flex items-center space-x-2 px-4 py-2 rounded-md transition-colors text-sm ${(isNewProduct && generatedImages.filter(img => img.url !== null).length >= 5 && generatedImages.filter(img => img.url !== null).length <= 7) ||
+                (!isNewProduct && selectedImages.filter(sel => sel !== null).length >= 5 && selectedImages.filter(sel => sel !== null).length <= 7)
+                ? 'bg-blue-600 text-white hover:bg-blue-700'
+                : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                }`}
               disabled={
-                isNewProduct 
-                  ? generatedImages.filter(img => img.url !== null).length < 7
-                  : selectedImages.filter(sel => sel !== null).length < 7
+                isNewProduct
+                  ? generatedImages.filter(img => img.url !== null).length < 5 || generatedImages.filter(img => img.url !== null).length > 7
+                  : selectedImages.filter(sel => sel !== null).length < 5 || selectedImages.filter(sel => sel !== null).length > 7
               }
             >
               <ArrowRight className="h-4 w-4" />
@@ -920,4 +1172,6 @@ const ImageComparisonPage = () => {
   );
 };
 
+
 export default ImageComparisonPage;
+

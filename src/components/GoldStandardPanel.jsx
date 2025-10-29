@@ -206,7 +206,7 @@ const GoldStandardPanel = ({ product = {} }) => {
               </div>
               <ul className="space-y-2">
                 {deduplicatedFeatures.map((feature, index) => (
-                  <li key={index} className="text-sm text-gray-700 flex items-start bg-green-50 p-2 rounded">
+                  <li key={index} className="text-sm text-gray-700 flex items-start bg-green-50 mb-0 border-b border-green-100 p-2 rounded">
                     <span className="text-green-600 mr-2 font-bold">•</span>
                     <span>{feature}</span>
                   </li>

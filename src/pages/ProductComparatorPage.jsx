@@ -140,7 +140,12 @@ const [isEditingTitle, setIsEditingTitle] = useState(false);
 const [acceptedTitle, setAcceptedTitle] = useState('');
 const [originalTitle, setOriginalTitle] = useState('');
 const titleTextareaRef = useRef(null);
-
+// About this Item State
+const [productFeatures, setProductFeatures] = useState([]);
+const [editingFeatures, setEditingFeatures] = useState({});
+const [featureValues, setFeatureValues] = useState({});
+const [showAddFeature, setShowAddFeature] = useState(false);
+const [newFeature, setNewFeature] = useState('');
 
 
 
@@ -203,6 +208,15 @@ useEffect(() => {
    if (storedGoldenProduct) {
      const parsedProduct = JSON.parse(storedGoldenProduct);
      setGoldenProduct(parsedProduct);
+
+     // Initialize features from golden product
+      const features = parsedProduct.features || [];
+      setProductFeatures(features.map((feature, index) => ({
+        id: index,
+        text: feature,
+        accepted: false
+      })));
+
       // Initialize title and description from golden product
      const title = parsedProduct.title || '';
      const description = parsedProduct.description ||
@@ -275,14 +289,20 @@ useEffect(() => {
    } else {
      // Fallback to mockData if nothing in localStorage
      setGoldenProduct(goldStandardProduct);
-      setProductTitle(goldStandardProduct.title);
+     setProductTitle(goldStandardProduct.title);
      setAcceptedTitle(goldStandardProduct.title);
      setOriginalTitle(goldStandardProduct.title);
-      setProductDescription(goldStandardProduct.description);
+     setProductDescription(goldStandardProduct.description);
      setAcceptedDescription(goldStandardProduct.description);
      setOriginalDescription(goldStandardProduct.description);
       // Initialize from mockData
      const attributes = [];
+     const features = goldStandardProduct.features || [];
+      setProductFeatures(features.map((feature, index) => ({
+        id: index,
+        text: feature,
+        accepted: false
+      })));
      let attrId = 1;
      Object.entries(goldStandardProduct.details).forEach(([key, value]) => {
        attributes.push({
@@ -304,6 +324,12 @@ useEffect(() => {
     setProductDescription(goldStandardProduct.description);
    setAcceptedDescription(goldStandardProduct.description);
    setOriginalDescription(goldStandardProduct.description);
+   const features = goldStandardProduct.features || [];
+    setProductFeatures(features.map((feature, index) => ({
+      id: index,
+      text: feature,
+      accepted: false
+    })));
     const attributes = [];
    let attrId = 1;
    Object.entries(goldStandardProduct.details).forEach(([key, value]) => {
@@ -326,8 +352,8 @@ useEffect(() => {
 
 
 // Check if all attributes are accepted
-const allAttributesAccepted = productAttributes.every(attr => attr.accepted);
-
+const allAttributesAccepted = productAttributes.every(attr => attr.accepted) && 
+                             productFeatures.every(feature => feature.accepted);
 
 
 
@@ -354,6 +380,13 @@ const handleLoadUrl = async () => {
    const data = await scrapeProductFromUrl(productUrl);
    console.log('ÃƒÂ°Ã…Â¸Ã¢â‚¬ÂÃ‚Â Scraped Product Data:', data);
    setScrapedData(data);
+   // Initialize features from scraped data
+    const features = data.features || [];
+    setProductFeatures(features.map((feature, index) => ({
+      id: index,
+      text: feature,
+      accepted: false
+    })));
     // Set title and description from scraped data
    setProductTitle(data.title || '');
    setAcceptedTitle(data.title || '');
@@ -909,7 +942,69 @@ const handleAIGenerateDescription = async () => {
 
 
 
+// Feature Handlers
+// Add feature editing handlers
+const handleEditFeature = (featureId) => {
+  const currentFeature = productFeatures.find(f => f.id === featureId);
+  // Initialize with current text if not already set in featureValues
+  if (!featureValues.hasOwnProperty(featureId)) {
+    setFeatureValues(prev => ({
+      ...prev,
+      [featureId]: currentFeature?.text || ''
+    }));
+  }
+  setEditingFeatures(prev => ({ ...prev, [featureId]: true }));
+};
 
+const handleCancelEditFeature = (featureId, originalText) => {
+  setFeatureValues(prev => ({ 
+    ...prev, 
+    [featureId]: originalText 
+  }));
+  setEditingFeatures(prev => ({ ...prev, [featureId]: false }));
+};
+
+const handleAcceptFeature = (featureId) => {
+  const currentFeature = productFeatures.find(f => f.id === featureId);
+  const currentValue = featureValues[featureId] || currentFeature?.text || '';
+  
+  setProductFeatures(prev =>
+    prev.map(feature =>
+      feature.id === featureId ? {
+        ...feature,
+        accepted: true,
+        text: currentValue
+      } : feature
+    )
+  );
+  setEditingFeatures(prev => ({ ...prev, [featureId]: false }));
+};
+
+const handleFeatureChange = (featureId, value) => {
+  setFeatureValues(prev => ({ 
+    ...prev, 
+    [featureId]: value 
+  }));
+};
+
+const handleAddFeature = () => {
+  if (newFeature.trim()) {
+    const newId = productFeatures.length;
+    const newFeatureObj = {
+      id: newId,
+      text: newFeature.trim(),
+      accepted: false
+    };
+    setProductFeatures([...productFeatures, newFeatureObj]);
+    setFeatureValues(prev => ({ ...prev, [newId]: newFeature.trim() }));
+    setNewFeature('');
+    setShowAddFeature(false);
+  }
+};
+
+const handleDeleteFeature = (featureId) => {
+  setProductFeatures(prev => prev.filter(feature => feature.id !== featureId));
+};
 
 
 
@@ -991,48 +1086,44 @@ const handleAddAttribute = () => {
 
 
 const handleProceed = () => {
- const allAccepted = productAttributes.every(attr => attr.accepted);
- if (allAccepted && scrapedData) {
-   // Construct product data using current attributeValues (latest user input)
-   const productData = {
-     title: acceptedTitle,
-     description: acceptedDescription,
-     attributes: productAttributes.map(attr => ({
-       key: attr.key,
+  const allAccepted = productAttributes.every(attr => attr.accepted) && 
+                     productFeatures.every(feature => feature.accepted);
+
+  if (allAccepted && scrapedData) {
+    // Construct product data using current attributeValues (latest user input)
+    const productData = {
+      title: acceptedTitle,
+      description: acceptedDescription,
+      attributes: productAttributes.map(attr => ({
+        key: attr.key,
         value: attr.scrapedValue || attributeValues[attr.id] || '',
         accepted: attr.accepted,
-        isCustom: attr.isExtra || false // Mark custom attributes
-     }))
-   };
-   console.log('Product Data:', productData);
+        isCustom: attr.isExtra || false
+      })),
+      features: productFeatures.map(feature => feature.text)
+    };
+    console.log('Product Data:', productData);
 
-
-
-
-
-
-
-
-   // Save the existing/scraped product to localStorage for image comparison page
-   const existingProduct = {
-     id: scrapedData.asin || 'N/A',
-     asin: scrapedData.asin || 'N/A',
-     title: acceptedTitle,
-     brand: scrapedData.brand,
-     amazonUrl: productUrl,
+    // Save the existing/scraped product to localStorage for image comparison page
+    const existingProduct = {
+      id: scrapedData.asin || 'N/A',
+      asin: scrapedData.asin || 'N/A',
+      title: acceptedTitle,
+      brand: scrapedData.brand,
+      amazonUrl: productUrl,
       // Images from scraped data
-     images: scrapedData.images || [],
+      images: scrapedData.images || [],
       // Features/Bullets
-     features: scrapedData.features || [],
+      features: productFeatures.map(feature => feature.text),
       // Description
-     description: acceptedDescription,
+      description: acceptedDescription,
       // Detailed sections
-     productDetails: scrapedData.productDetails,
-     productDetailsArray: scrapedData.productDetailsArray || [],
+      productDetails: scrapedData.productDetails,
+      productDetailsArray: scrapedData.productDetailsArray || [],
       manufacturingDetails: scrapedData.manufacturingDetails,
-     manufacturingDetailsArray: scrapedData.manufacturingDetailsArray || [],
+      manufacturingDetailsArray: scrapedData.manufacturingDetailsArray || [],
       additionalInfo: scrapedData.additionalInfo,
-     additionalInfoArray: scrapedData.additionalInfoArray || [],
+      additionalInfoArray: scrapedData.additionalInfoArray || [],
     
       // Store the full accepted attributes including custom ones
       acceptedAttributes: productAttributes.map(attr => ({
@@ -1043,15 +1134,17 @@ const handleProceed = () => {
         section: attr.section || 'Custom Attributes'
       })),
       // Store the full scraped data
-     scrapedData: scrapedData
-   };
+      scrapedData: scrapedData
+    };
+    
     localStorage.setItem('existingProduct', JSON.stringify(existingProduct));
-   console.log('ÃƒÂ°Ã…Â¸Ã¢â‚¬â„¢Ã‚Â¾ Stored existing product in localStorage:', existingProduct);
+    console.log('✅ Stored existing product in localStorage:', existingProduct);
+    
     // Pass state to indicate NOT coming from new product page
-   navigate('/compare-images', { state: { isNewProduct: false } });
- } else {
-   alert("Please accept all attributes before proceeding.");
- }
+    navigate('/compare-images', { state: { isNewProduct: false } });
+  } else {
+    alert("Please accept all attributes and features before proceeding.");
+  }
 };
 
 
@@ -1227,16 +1320,42 @@ return (
   
        {/* Column Headers */}
        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6 pb-4 border-b border-gray-200">
-         {/* Left Column Header */}
-         <div className="flex items-center gap-2">
-           <Star className="h-6 w-6 fill-yellow-400 text-yellow-400" />
-           <h2 className="text-xl font-semibold text-gray-900">Gold Standard Product</h2>
-         </div>
-         {/* Right Column Header */}
-         <div>
-           <h2 className="text-xl font-semibold text-gray-900">Your Product</h2>
-         </div>
-       </div>
+        {/* Left Column Header */}
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Star className="h-6 w-6 fill-yellow-400 text-yellow-400" />
+            <h2 className="text-xl font-semibold text-gray-900">Gold Standard Product</h2>
+          </div>
+          {goldenProduct.amazonUrl && (
+            <a
+              href={goldenProduct.amazonUrl.startsWith('http') ? goldenProduct.amazonUrl : `https://${goldenProduct.amazonUrl}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center space-x-1 text-blue-600 hover:text-blue-700 text-sm pr-5"
+            >
+              <span className=''>View on Amazon</span>
+              <ExternalLink className="h-4 w-4" />
+            </a>
+          )}
+        </div>
+        
+        {/* Right Column Header */}
+        <div className="flex items-center justify-between">
+          <h2 className="text-xl font-semibold text-gray-900">Your Product</h2>
+          {productUrl && (
+            <a
+              href={productUrl.startsWith('http') ? productUrl : `https://${productUrl}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center space-x-1 text-blue-600 hover:text-blue-700 text-sm pr-5"
+            >
+              <span>View on Amazon</span>
+              <ExternalLink className="h-4 w-4" />
+            </a>
+          )}
+        </div>
+      </div>
+
 
 
 
@@ -1339,8 +1458,6 @@ return (
                  })()
                )}
              </div>
-
-
 
 
 
@@ -1544,7 +1661,162 @@ return (
 
 
 
+       {/* About This Item (Features/Bullet Points) Section */}
+        <div className="mb-8">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-4">
+            <h3 className="text-lg font-semibold text-gray-700">About This Item</h3>
+            <h3 className="text-lg font-semibold text-gray-700">About This Item</h3>
+          </div>
+          
+          {/* Create aligned rows for each feature */}
+          <div className="space-y-4">
+            {productFeatures.map((feature, index) => (
+              <div key={feature.id} className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                {/* Left: Gold Standard Feature */}
+                <div className="bg-gradient-to-r from-yellow-50 to-amber-50 border border-yellow-300 rounded-lg p-4">
+                  <div className="bg-white/60 rounded-md p-3 border border-yellow-200">
+                    {goldenProduct.features && goldenProduct.features[index] ? (
+                      <div className="flex items-start">
+                        <span className="text-yellow-600 mr-2">•</span>
+                        <span className="text-gray-800 text-sm leading-relaxed">
+                          {goldenProduct.features[index]}
+                        </span>
+                      </div>
+                    ) : (
+                      <p className="text-gray-500 text-sm italic">No corresponding feature</p>
+                    )}
+                  </div>
+                </div>
 
+                {/* Right: Editable Feature */}
+                {!scrapedData ? (
+                  <div className="bg-gray-50 border border-gray-300 rounded-lg p-4 flex items-center justify-center">
+                    <p className="text-gray-500 text-sm text-center">
+                      Load a product URL to view features
+                    </p>
+                  </div>
+                ) : (
+                  <div className="bg-white border border-gray-300 rounded-lg p-4">
+                    <div className="flex items-start justify-between">
+                      {editingFeatures[feature.id] ? (
+                        <div className="flex-1 space-y-2">
+                          <input
+                            type="text"
+                            className="border border-gray-300 rounded-md px-3 py-2 text-sm w-full focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                            value={featureValues[feature.id] || feature.text}
+                            onChange={e => handleFeatureChange(feature.id, e.target.value)}
+                            autoFocus
+                          />
+                          <div className="flex gap-2">
+                            <button
+                              className="flex items-center space-x-1 px-3 py-1.5 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors text-sm"
+                              onClick={() => handleAcceptFeature(feature.id)}
+                            >
+                              <Check className="h-3.5 w-3.5" />
+                              <span>Accept</span>
+                            </button>
+                            <button
+                              className="px-3 py-1.5 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 transition-colors text-sm"
+                              onClick={() => handleCancelEditFeature(feature.id, feature.text)}
+                            >
+                              Cancel
+                            </button>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="flex-1 flex items-start">
+                          <span className="text-blue-600 mr-2 mt-1">•</span>
+                          <div className="flex-1">
+                            <p className="text-gray-800 text-sm leading-relaxed">
+                              {feature.text}
+                            </p>
+                            <div className="flex gap-2 mt-2">
+                              <button
+                                className="flex items-center space-x-1 px-2 py-1 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors text-xs"
+                                onClick={() => handleEditFeature(feature.id)}
+                              >
+                                <Edit2 className="h-3 w-3" />
+                                <span>Edit</span>
+                              </button>
+                              {!feature.accepted && (
+                                <button
+                                  className="flex items-center space-x-1 px-2 py-1 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors text-xs"
+                                  onClick={() => handleAcceptFeature(feature.id)}
+                                >
+                                  <Check className="h-3 w-3" />
+                                  <span>Accept</span>
+                                </button>
+                              )}
+                            </div>
+                          </div>
+                          {feature.accepted && (
+                            <div className="flex items-center text-green-600 ml-2 flex-shrink-0">
+                              <Check className="h-4 w-4" />
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
+            ))}
+            
+            {/* Add New Feature Section */}
+            {scrapedData && (
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                {/* Empty left side for alignment */}
+                <div></div>
+                
+                {/* Right: Add New Feature */}
+                {showAddFeature ? (
+                  <div className="bg-blue-50 border border-blue-300 rounded-lg p-4">
+                    <div className="space-y-2">
+                      <input
+                        type="text"
+                        placeholder="Enter new feature..."
+                        className="border border-gray-300 rounded-md px-3 py-2 text-sm w-full focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                        value={newFeature}
+                        onChange={e => setNewFeature(e.target.value)}
+                      />
+                      <div className="flex gap-2">
+                        <button
+                          className={`flex items-center space-x-1 px-3 py-1.5 rounded-md transition-colors text-sm ${
+                            newFeature.trim()
+                              ? 'bg-green-600 text-white hover:bg-green-700'
+                              : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                          }`}
+                          onClick={handleAddFeature}
+                          disabled={!newFeature.trim()}
+                        >
+                          <Check className="h-3.5 w-3.5" />
+                          <span>Add Feature</span>
+                        </button>
+                        <button
+                          className="px-3 py-1.5 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 transition-colors text-sm"
+                          onClick={() => {
+                            setShowAddFeature(false);
+                            setNewFeature('');
+                          }}
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  <button
+                    className="flex items-center justify-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors text-sm w-full"
+                    onClick={() => setShowAddFeature(true)}
+                  >
+                    <Plus className="h-4 w-4" />
+                    <span>Add New Feature</span>
+                  </button>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
 
 
 
@@ -1758,52 +2030,53 @@ return (
      </div>
 
 
-
+           
 
 
 
 
 
      {/* Action Bar */}
-     <div className="mt-6 bg-white rounded-lg shadow-sm border border-gray-200 p-4">
-       <div className="flex items-center justify-between">
-         <div className="text-sm text-gray-600">
-           {scrapedData ? (
-             <>
-               {productAttributes.every(attr => attr.accepted) ? (
-                 <>
-                   <span className="font-medium text-green-600">All attributes accepted!</span>
-                   <span className="ml-2">Ready to proceed to image comparison.</span>
-                 </>
-               ) : (
-                 <>
-                   <span className="font-medium">Please accept all attributes to proceed</span>
-                   <span className="ml-2">
-                     ({productAttributes.filter(attr => attr.accepted).length} of {productAttributes.length} accepted)
-                   </span>
-                 </>
-               )}
-             </>
-           ) : (
-             <>
-               <span className="font-medium">Enter a product URL to begin</span>
-               <span className="ml-2">Load a product to see the comparison</span>
-             </>
-           )}
-         </div>
-         <button
-           className={`flex items-center space-x-2 px-6 py-2 rounded-md transition-colors text-sm font-medium ${
-             scrapedData && productAttributes.every(attr => attr.accepted)
-               ? 'bg-green-600 text-white hover:bg-green-700 cursor-pointer'
-               : 'bg-gray-300 text-gray-500 cursor-not-allowed'
-           }`}
-           onClick={handleProceed}
-           disabled={!scrapedData || !productAttributes.every(attr => attr.accepted)}
-         >
-           <span>Proceed</span>
-         </button>
-       </div>
-     </div>
+      <div className="mt-6 bg-white rounded-lg shadow-sm border border-gray-200 p-4">
+        <div className="flex items-center justify-between">
+          <div className="text-sm text-gray-600">
+            {scrapedData ? (
+              <>
+                {productAttributes.every(attr => attr.accepted) && productFeatures.every(feature => feature.accepted) ? (
+                  <>
+                    <span className="font-medium text-green-600">All attributes and features accepted!</span>
+                    <span className="ml-2">Ready to proceed to image comparison.</span>
+                  </>
+                ) : (
+                  <>
+                    <span className="font-medium">Please accept all attributes and features to proceed</span>
+                    <span className="ml-2">
+                      ({productAttributes.filter(attr => attr.accepted).length} of {productAttributes.length} attributes, {' '}
+                      {productFeatures.filter(feature => feature.accepted).length} of {productFeatures.length} features accepted)
+                    </span>
+                  </>
+                )}
+              </>
+            ) : (
+              <>
+                <span className="font-medium">Enter a product URL to begin</span>
+                <span className="ml-2">Load a product to see the comparison</span>
+              </>
+            )}
+          </div>
+          <button
+            className={`flex items-center space-x-2 px-6 py-2 rounded-md transition-colors text-sm font-medium ${
+              scrapedData && productAttributes.every(attr => attr.accepted) && productFeatures.every(feature => feature.accepted)
+                ? 'bg-green-600 text-white hover:bg-green-700 cursor-pointer'
+                : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+            }`}
+            onClick={handleProceed}
+            disabled={!scrapedData || !productAttributes.every(attr => attr.accepted) || !productFeatures.every(feature => feature.accepted)}
+          >
+            <span>Proceed</span>
+          </button>
+        </div>
+      </div>
    </div>
  </div>
 );
