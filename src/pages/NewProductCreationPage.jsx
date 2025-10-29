@@ -23,7 +23,12 @@ const NewProductCreationPage = () => {
   const [isEditingDescription, setIsEditingDescription] = useState(false);
   const [acceptedDescription, setAcceptedDescription] = useState('');
   const descTextareaRef = useRef(null);
-  
+
+  // Product Features State
+  const [productFeatures, setProductFeatures] = useState([]);
+  const [featureValues, setFeatureValues] = useState({});
+  const [newFeature, setNewFeature] = useState('');
+
   // Product Attributes State - will be dynamically initialized
   const [productAttributes, setProductAttributes] = useState({});
 
@@ -55,7 +60,7 @@ const NewProductCreationPage = () => {
         // Initialize product attributes dynamically based on golden product
         // Combine all available attribute arrays (productDetails, manufacturing, additionalInfo)
         const initialAttributes = {};
-        
+
         if (parsedProduct.details) {
           // MockData format with details object
           Object.keys(parsedProduct.details).forEach(key => {
@@ -71,7 +76,7 @@ const NewProductCreationPage = () => {
           
           allArrays.forEach(item => {
             const key = item.label?.toLowerCase().replace(/\s+/g, '').replace(/[^a-z0-9]/g, '') || 
-                       item.key?.toLowerCase().replace(/\s+/g, '').replace(/[^a-z0-9]/g, '');
+                      item.key?.toLowerCase().replace(/\s+/g, '').replace(/[^a-z0-9]/g, '');
             if (key && !initialAttributes[key]) { // Avoid duplicates
               initialAttributes[key] = '';
             }
@@ -84,6 +89,21 @@ const NewProductCreationPage = () => {
             });
           }
         }
+
+        // Initialize Features with blank input fields
+        const features = parsedProduct.features || [];
+        setProductFeatures(features.map((feature, index) => ({
+          id: index,
+          text: feature,
+          accepted: false
+        })));
+        
+        // Initialize featureValues as empty for all features
+        const initialFeatureValues = {};
+        features.forEach((_, index) => {
+          initialFeatureValues[index] = '';
+        });
+        setFeatureValues(initialFeatureValues);
         
         setProductAttributes(initialAttributes);
       } else {
@@ -96,6 +116,21 @@ const NewProductCreationPage = () => {
           initialAttributes[key] = '';
         });
         setProductAttributes(initialAttributes);
+
+        // Initialize features from mockData with blank input fields
+        const features = goldStandardProduct.features || [];
+        setProductFeatures(features.map((feature, index) => ({
+          id: index,
+          text: feature,
+          accepted: false
+        })));
+
+        // Initialize featureValues as empty for all features
+        const initialFeatureValues = {};
+        features.forEach((_, index) => {
+          initialFeatureValues[index] = '';
+        });
+        setFeatureValues(initialFeatureValues);
       }
     } catch (error) {
       console.error('Error fetching golden product from localStorage:', error);
@@ -106,9 +141,31 @@ const NewProductCreationPage = () => {
       Object.keys(goldStandardProduct.details).forEach(key => {
         initialAttributes[key] = '';
       });
+
+      const features = goldStandardProduct.features || [];
+      setProductFeatures(features.map((feature, index) => ({
+        id: index,
+        text: feature,
+        accepted: false
+      })));
+
+      // Initialize featureValues as empty for all features
+      const initialFeatureValues = {};
+      features.forEach((_, index) => {
+        initialFeatureValues[index] = '';
+      });
+      setFeatureValues(initialFeatureValues);
+
       setProductAttributes(initialAttributes);
     }
   }, []);
+
+  const handleFeatureChange = (featureId, value) => {
+    setFeatureValues(prev => ({ 
+      ...prev, 
+      [featureId]: value 
+    }));
+  };
 
   const handleAttributeChange = (key, value) => {
     setProductAttributes(prev => ({
@@ -134,8 +191,22 @@ const NewProductCreationPage = () => {
     }
   };
 
+  const handleAddFeature = () => {
+    if (newFeature.trim()) {
+      const newId = productFeatures.length;
+      const newFeatureObj = {
+        id: newId,
+        text: newFeature.trim(),
+        accepted: false
+      };
+      setProductFeatures([...productFeatures, newFeatureObj]);
+      setFeatureValues(prev => ({ ...prev, [newId]: '' })); // Initialize as empty
+      setNewFeature('');
+    }
+  };
+
   const handleSaveDraft = () => {
-    // Build product object similar to existingProduct structure
+  // Build product object similar to existingProduct structure
     const newProductData = {
       id: 'NEW-' + Date.now(), // Generate unique ID
       asin: 'NEW-' + Date.now(),
@@ -146,8 +217,10 @@ const NewProductCreationPage = () => {
       // Images - empty for now (will be generated)
       images: [],
       
-      // Features/Bullets - use description as a feature
-      features: acceptedDescription ? [acceptedDescription] : [],
+      // Features/Bullets - use only the values from featureValues (user input)
+      features: productFeatures.map(feature => 
+        featureValues[feature.id] || '' // Use only user input, fallback to empty string
+      ).filter(feature => feature.trim() !== ''), // Remove empty features
       
       // Description
       description: acceptedDescription,
@@ -296,7 +369,7 @@ const NewProductCreationPage = () => {
   };
 
   const calculateProgress = () => {
-    // Count filled fields dynamically
+  // Count filled fields dynamically
     let totalFields = 0;
     let filledFields = 0;
 
@@ -309,10 +382,18 @@ const NewProductCreationPage = () => {
     if (productDescription.trim() !== '') filledFields += 1;
 
     // 3. All attribute fields (including custom attributes)
-    // Simply count all attributes in productAttributes state
     Object.entries(productAttributes).forEach(([key, value]) => {
       totalFields += 1;
       if (value && value.trim() !== '') {
+        filledFields += 1;
+      }
+    });
+
+    // 4. All feature fields - check only featureValues (user input)
+    productFeatures.forEach(feature => {
+      totalFields += 1;
+      const featureValue = featureValues[feature.id]; // Only check user input
+      if (featureValue && featureValue.trim() !== '') {
         filledFields += 1;
       }
     });
@@ -665,6 +746,93 @@ const NewProductCreationPage = () => {
               )}
             </div>
           </div>
+
+
+          {/* About This Item (Features/Bullet Points) Section */}
+          <div className="mb-8">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-4">
+              <h3 className="text-lg font-semibold text-gray-700">About This Item</h3>
+              <h3 className="text-lg font-semibold text-gray-700">About This Item</h3>
+            </div>
+            
+            {/* Create aligned rows for each feature */}
+            <div className="space-y-4">
+              {productFeatures.map((feature, index) => (
+                <div key={feature.id} className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                  {/* Left: Gold Standard Feature */}
+                  <div className="bg-gradient-to-r from-yellow-50 to-amber-50 border border-yellow-300 rounded-lg p-4">
+                    <div className="bg-white/60 rounded-md p-3 border border-yellow-200">
+                      {goldenProduct.features && goldenProduct.features[index] ? (
+                        <div className="flex items-start">
+                          <span className="text-yellow-600 mr-2">•</span>
+                          <span className="text-gray-800 text-sm leading-relaxed">
+                            {goldenProduct.features[index]}
+                          </span>
+                        </div>
+                      ) : (
+                        <p className="text-gray-500 text-sm italic">No corresponding feature</p>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Right: Blank Feature Input Field */}
+                  <div className="bg-white border border-gray-300 rounded-lg p-4">
+                    <div className="flex items-start">
+                      <span className="text-blue-600 mr-2 mt-1">•</span>
+                      <div className="flex-1">
+                        <input
+                          type="text"
+                          className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                          value={featureValues[feature.id] || ''} // Always starts blank
+                          onChange={e => handleFeatureChange(feature.id, e.target.value)}
+                          placeholder="Enter feature description..."
+                        />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ))}
+              
+              {/* Add New Feature Section */}
+              {productFeatures.length > 0 && (
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                  {/* Empty left side for alignment */}
+                  <div></div>
+                  
+                  {/* Right: Add New Feature Input */}
+                  <div className="bg-blue-50 border border-blue-300 rounded-lg p-4">
+                    <div className="space-y-2">
+                      <input
+                        type="text"
+                        placeholder="Add new feature..."
+                        className="border border-gray-300 rounded-md px-3 py-2 text-sm w-full focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                        value={newFeature}
+                        onChange={e => setNewFeature(e.target.value)}
+                        onKeyPress={(e) => {
+                          if (e.key === 'Enter' && newFeature.trim()) {
+                            handleAddFeature();
+                          }
+                        }}
+                      />
+                      <button
+                        className={`flex items-center space-x-1 px-3 py-1.5 rounded-md transition-colors text-sm ${
+                          newFeature.trim()
+                            ? 'bg-green-600 text-white hover:bg-green-700'
+                            : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                        }`}
+                        onClick={handleAddFeature}
+                        disabled={!newFeature.trim()}
+                      >
+                        <Plus className="h-3.5 w-3.5" />
+                        <span>Add Feature</span>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+
 
           {/* Product Title Section - MOVED BELOW ATTRIBUTES */}
           <div className="mb-8">

@@ -45,13 +45,13 @@ const FinalPage = () => {
     // Helper to find value in productDetails or manufacturingDetails
     const findDetailValue = (labelSearch) => {
       if (comparisonData.productDetails) {
-        const detail = comparisonData.productDetails.find(d => 
+        const detail = comparisonData.productDetails.find(d =>
           d.label.toLowerCase().includes(labelSearch.toLowerCase())
         );
         if (detail) return detail.value;
       }
       if (comparisonData.manufacturingDetails) {
-        const detail = comparisonData.manufacturingDetails.find(d => 
+        const detail = comparisonData.manufacturingDetails.find(d =>
           d.label.toLowerCase().includes(labelSearch.toLowerCase())
         );
         if (detail) return detail.value;
@@ -340,13 +340,13 @@ const FinalPage = () => {
     // Upload to Google Sheets
     try {
       console.log('📤 Uploading to Google Sheets...');
-      
+
       // Prepare data for Google Sheets API (array of arrays)
       const sheetData = [
         columnHeaders, // First row: headers
         dataRow        // Second row: data
       ];
-      
+
       const response = await fetch('http://localhost:3000/api/upload-to-sheets', {
         method: 'POST',
         headers: {
@@ -356,22 +356,22 @@ const FinalPage = () => {
           csvData: sheetData,
         })
       });
-      
+
       const result = await response.json();
-      
+
       if (result.success) {
         console.log('✅ Data uploaded to Google Sheets:', result.sheetUrl);
         console.log('📊 Total rows now:', result.totalRowsNow);
-        
+
         // Open Google Sheets in a new tab
         if (result.sheetUrl) {
           window.open(result.sheetUrl, '_blank');
         }
-        
-        const message = result.totalRowsNow > 1 
+
+        const message = result.totalRowsNow > 1
           ? `Success! \n\n✅ Product data appended to Google Sheet\n\nSheet: ${result.tabName}\nTotal products: ${result.totalRowsNow - 1}\n\nOpening Google Sheet in new tab...`
           : `Success! \n\n✅ New sheet created and data uploaded\n\nSheet: ${result.tabName}\n\nOpening Google Sheet in new tab...`;
-        
+
         // alert(message);
       } else {
         console.error('❌ Failed to upload to Google Sheets:', result.error);
@@ -417,11 +417,11 @@ const FinalPage = () => {
     // Load existing product from localStorage
     const storedExisting = localStorage.getItem('existingProduct');
     const existingProductData = storedExisting ? JSON.parse(storedExisting) : null;
-    
+
     // Load all product images (existing + generated) from localStorage
     const storedAllImages = localStorage.getItem('allProductImages');
     let productImages = [];
-    
+
     if (storedAllImages) {
       try {
         productImages = JSON.parse(storedAllImages);
@@ -430,13 +430,13 @@ const FinalPage = () => {
         console.error('Error parsing all product images:', error);
       }
     }
-    
+
     // Fallback: If no combined images, try to build from individual sources
     if (productImages.length === 0) {
       // Try loading generated images
       const storedGeneratedImages = localStorage.getItem('generatedImages');
       const generatedImages = storedGeneratedImages ? JSON.parse(storedGeneratedImages) : [];
-      
+
       // Add existing product images
       if (existingProductData?.images && Array.isArray(existingProductData.images)) {
         existingProductData.images.forEach((url, index) => {
@@ -447,7 +447,7 @@ const FinalPage = () => {
           });
         });
       }
-      
+
       // Add generated images
       if (generatedImages.length > 0) {
         generatedImages.forEach((url, index) => {
@@ -458,20 +458,20 @@ const FinalPage = () => {
           });
         });
       }
-      
+
       console.log('📦 Built combined images from individual sources:', productImages);
     }
-    
+
     setAllImages(productImages);
-    
+
     // Load generated images from localStorage (for backward compatibility)
     const storedGeneratedImages = localStorage.getItem('generatedImages');
     const generatedImages = storedGeneratedImages ? JSON.parse(storedGeneratedImages) : [];
-    
+
     // Load gold standard product from localStorage
     const storedGoldStandard = localStorage.getItem('goldStandardProduct');
     const goldStandardData = storedGoldStandard ? JSON.parse(storedGoldStandard) : null;
-    
+
     // Load product attributes
     const storedFilters = localStorage.getItem('productFilters');
     const productAttributes = storedFilters ? JSON.parse(storedFilters) : {};
@@ -487,7 +487,7 @@ const FinalPage = () => {
       const existingFeatures = extractFeatures(existingProductData);
       console.log('✨ Features extracted from EXISTING product:', existingFeatures);
       console.log('🔍 Existing product features property:', existingProductData.features);
-      
+
       const data = {
         // Original Product (Existing Product)
         originalTitle: existingProductData.title || 'N/A',
@@ -496,7 +496,7 @@ const FinalPage = () => {
         originalImage: (existingProductData.images && existingProductData.images[0]) || 'https://placehold.co/400x400/E5E7EB/6B7280?text=No+Image',
         originalRating: extractRating(existingProductData) || 0,
         originalReviews: extractReviews(existingProductData) || 0,
-        
+
         // Competitor Product (Gold Standard - if available)
         competitorTitle: goldStandardData?.title || 'Gold Standard Product',
         competitorPrice: extractPrice(goldStandardData) || 0,
@@ -511,38 +511,38 @@ const FinalPage = () => {
         // Product Details
         description: existingProductData.description || 'No description available',
         features: existingFeatures,
-        
+
         // Brand Information
         brandComparison: {
           original: existingProductData.brand || extractBrand(existingProductData) || 'N/A',
           competitor: goldStandardData?.brand || extractBrand(goldStandardData) || 'N/A'
         },
-        
+
         // Product Attributes
         productAttributes: productAttributes,
-        
+
         // Additional Details
         productDetails: existingProductData.productDetailsArray || [],
         manufacturingDetails: existingProductData.manufacturingDetailsArray || [],
-        
+
         // Metadata
         department: extractDepartment(existingProductData) || productAttributes.Category || 'General',
         category: productAttributes.Category || 'N/A',
         subcategory: productAttributes.Subcategory || productAttributes.SubCategory || 'N/A',
-        
+
         // Sizes and Colors (extract from product details or use defaults)
         sizes: extractSizes(existingProductData) || ['S', 'M', 'L', 'XL', 'XXL'],
         colors: extractColors(existingProductData) || ['Default'],
-        
+
         // Similarity score (can be calculated or set to default)
         similarityScore: 0,
-        
+
         // Notes
         notes: generateComparisonNotes(existingProductData, goldStandardData, productAttributes),
-        
+
         deliveryDate: `Delivery by ${getEstimatedDelivery()}`
       };
-      
+
       setComparisonData(data);
       console.log('✅ Built comparison data:', data);
     } else {
@@ -555,7 +555,7 @@ const FinalPage = () => {
         originalImage: "https://placehold.co/400x400/E5E7EB/6B7280?text=No+Product",
         originalRating: 0,
         originalReviews: 0,
-        
+
         competitorTitle: "No Gold Standard",
         competitorPrice: 0,
         competitorAsin: "N/A",
@@ -566,7 +566,7 @@ const FinalPage = () => {
         generatedImages: generatedImages || [],
         similarityScore: 0,
         notes: "No product data available. Please go back and select a product.",
-        
+
         brandComparison: {
           original: "N/A",
           competitor: "N/A"
@@ -588,7 +588,7 @@ const FinalPage = () => {
     if (product.price) return parseFloat(product.price);
     if (product.productDetails?.Price) return parseFloat(product.productDetails.Price);
     if (product.productDetailsArray) {
-      const priceDetail = product.productDetailsArray.find(d => 
+      const priceDetail = product.productDetailsArray.find(d =>
         d.label && d.label.toLowerCase().includes('price')
       );
       if (priceDetail) return parseFloat(priceDetail.value);
@@ -614,7 +614,7 @@ const FinalPage = () => {
   const extractBrand = (product) => {
     if (!product) return null;
     if (product.brand) return product.brand;
-    
+
     // Try to extract from manufacturing details
     if (product.manufacturingDetails?.Manufacturer) {
       const manufacturer = product.manufacturingDetails.Manufacturer;
@@ -622,18 +622,18 @@ const FinalPage = () => {
       return manufacturer.split(',')[0].trim();
     }
     if (product.productDetailsArray) {
-      const brandDetail = product.productDetailsArray.find(d => 
+      const brandDetail = product.productDetailsArray.find(d =>
         d.label && d.label.toLowerCase().includes('brand')
       );
       if (brandDetail) return brandDetail.value;
     }
 
-    if(product.productDetails?.Brand) {
+    if (product.productDetails?.Brand) {
       return product.productDetails.Brand;
     }
 
-    
-    
+
+
     return null;
   };
 
@@ -643,23 +643,23 @@ const FinalPage = () => {
       console.log('⚠️ No product provided to extractFeatures');
       return [];
     }
-    
+
     // If features array exists, use it (THIS IS THE PRIMARY SOURCE)
     if (product.features && Array.isArray(product.features) && product.features.length > 0) {
       console.log('✅ Found features array in product:', product.features);
       console.log('📊 Number of features:', product.features.length);
       return product.features;
     }
-    
+
     console.log('⚠️ No features array found in product, trying fallback methods');
-    
+
     // Try to extract from description
     const features = [];
     if (product.description) {
       features.push(product.description);
       console.log('📝 Added description as feature:', product.description);
     }
-    
+
     // Add generic features from product details
     if (product.productDetails?.Department) {
       features.push(`Department: ${product.productDetails.Department}`);
@@ -667,7 +667,7 @@ const FinalPage = () => {
     if (product.productDetails?.['Generic Name']) {
       features.push(`Type: ${product.productDetails['Generic Name']}`);
     }
-    
+
     console.log('🔚 Final features array:', features.length > 0 ? features : ['No features available']);
     return features.length > 0 ? features : ['No features available'];
   };
@@ -675,15 +675,15 @@ const FinalPage = () => {
   const extractDepartment = (product) => {
     if (!product) return null;
     if (product.productDetails?.Department) return product.productDetails.Department;
-    
+
     // Search in productDetailsArray
     if (product.productDetailsArray) {
-      const deptDetail = product.productDetailsArray.find(d => 
+      const deptDetail = product.productDetailsArray.find(d =>
         d.label && d.label.toLowerCase().includes('department')
       );
       if (deptDetail) return deptDetail.value;
     }
-    
+
     return null;
   };
 
@@ -703,23 +703,24 @@ const FinalPage = () => {
 
   const generateComparisonNotes = (existingProduct, goldStandard, attributes) => {
     if (!existingProduct) return 'No product data available for comparison.';
-    
+
     let notes = '';
-    
+
     if (goldStandard) {
       notes += `Comparing "${existingProduct.title}" with gold standard "${goldStandard.title}". `;
     } else {
       notes += `Analyzing product: "${existingProduct.title}". `;
     }
-    
+
     if (attributes && Object.keys(attributes).length > 0) {
       notes += `Product attributes: ${Object.entries(attributes).map(([k, v]) => `${k}: ${v}`).join(', ')}. `;
     }
-    
+
     if (existingProduct.description) {
+      console.log(existingProduct.description);
       notes += existingProduct.description;
     }
-    
+
     return notes || 'No additional notes available.';
   };
 
@@ -781,7 +782,7 @@ const FinalPage = () => {
                           e.target.src = `https://placehold.co/500x500/E5E7EB/6B7280?text=Image+Error`;
                         }}
                       />
-                      
+
                       {/* Navigation Arrows */}
                       {allImages.length > 1 && (
                         <>
@@ -801,7 +802,7 @@ const FinalPage = () => {
                           </button>
                         </>
                       )}
-                      
+
                       {/* Image Type Badge */}
                       <div className="absolute top-3 left-3">
                         {/* <span className={`px-3 py-1 rounded-full text-xs font-medium ${
@@ -812,7 +813,7 @@ const FinalPage = () => {
                           {allImages[currentImageIndex]?.type === 'generated' ? '🎨 AI Generated' : '📦 Existing'}
                         </span> */}
                       </div>
-                      
+
                       {/* Image Counter */}
                       <div className="absolute bottom-3 right-3 bg-black/70 text-white px-3 py-1 rounded-full text-sm">
                         {currentImageIndex + 1} / {allImages.length}
@@ -825,7 +826,7 @@ const FinalPage = () => {
                     </div>
                   )}
                 </div>
-                
+
                 {/* Image Label */}
                 <div className="text-center mt-3">
                   <p className="text-sm font-medium text-gray-900">
@@ -842,11 +843,10 @@ const FinalPage = () => {
                       <div
                         key={index}
                         onClick={() => goToImage(index)}
-                        className={`flex-shrink-0 cursor-pointer border-2 rounded-lg overflow-hidden transition-all ${
-                          currentImageIndex === index 
-                            ? 'border-blue-500 ring-2 ring-blue-300' 
+                        className={`flex-shrink-0 cursor-pointer border-2 rounded-lg overflow-hidden transition-all ${currentImageIndex === index
+                            ? 'border-blue-500 ring-2 ring-blue-300'
                             : 'border-gray-200 hover:border-blue-300'
-                        }`}
+                          }`}
                         style={{ width: '80px', height: '80px' }}
                       >
                         <div className="relative w-full h-full">
@@ -902,7 +902,6 @@ const FinalPage = () => {
                 </div>
               </div> */}
             </div>
-
             {/* Price Section */}
             <div className="py-4 border-b border-[#e7e7e7]">
               <div className="text-[#0F1111]">
@@ -911,12 +910,12 @@ const FinalPage = () => {
                   ₹{comparisonData?.originalPrice}
                 </span>
               </div>
-              
+
               {comparisonData?.competitorPrice > 0 && (
                 <div className="mt-1">
                   <div className="inline-flex items-center bg-[#fef8f2] px-2 py-1 rounded">
                     <span className="text-sm text-[#c45500]">
-                      {comparisonData?.originalPrice < comparisonData?.competitorPrice 
+                      {comparisonData?.originalPrice < comparisonData?.competitorPrice
                         ? 'Lower price than gold standard by '
                         : 'Higher price than gold standard by '}
                       ${Math.abs(comparisonData?.originalPrice - comparisonData?.competitorPrice).toFixed(2)}
@@ -925,6 +924,7 @@ const FinalPage = () => {
                 </div>
               )}
             </div>
+
 
             {/* Product Information */}
             <div className="py-4 border-b border-[#e7e7e7]">
@@ -980,63 +980,73 @@ const FinalPage = () => {
               )} */}
             </div>
 
-              {/* Features */}
-              <div className="border-b border-[#e7e7e7] pb-4">
-                <div className="flex items-center justify-between mb-2">
-                  <h3 className="text-[#0F1111] font-medium text-lg">About this item</h3>                 
-                </div>
-                <ul className="list-disc pl-5 space-y-1 text-sm text-[#0F1111]">
-                  {comparisonData?.features && comparisonData.features.length > 0 ? (
-                    comparisonData.features.map((feature, index) => (
-                      <li key={index}>{feature}</li>
-                    ))
-                  ) : (
-                    <li>No features available</li>
-                  )}
-                </ul>
+            {/* Features */}
+            <div className="border-b border-[#e7e7e7] pb-4">
+              <div className="flex items-center justify-between mb-2">
+                <h3 className="text-[#0F1111] font-medium text-lg">About this item</h3>
               </div>
+              <ul className="list-disc pl-5 space-y-1 text-sm text-[#0F1111]">
+                {comparisonData?.features && comparisonData.features.length > 0 ? (
+                  comparisonData.features.map((feature, index) => (
+                    <li key={index}>{feature}</li>
+                  ))
+                ) : (
+                  <li>No features available</li>
+                )}
+              </ul>
+            </div>
 
-              {/* Product Details */}
-              {comparisonData?.productDetails && comparisonData.productDetails.length > 0 && (
-                <div className="py-4 border-b border-[#e7e7e7]">
-                  <h3 className="text-[#0F1111] font-medium text-lg mb-2">Product Details</h3>
-                  <table className="w-full text-sm">
-                    <tbody>
-                      {comparisonData.productDetails.map((detail, index) => (
-                        <tr key={index}>
-                          <td className="py-1 pr-4 align-top text-[#565959]" style={{ width: '200px' }}>
-                            {detail.label.replace(/[\n\s:‏‎]+/g, ' ').trim()}
-                          </td>
-                          <td className="py-1 text-[#0F1111]">{detail.value}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
+            <div className='border-b border-[#e7e7e7] pb-4'>
+              {comparisonData?.description && (
+                <div className="mt-2">
+                  <h4 className="text-[#0F1111] font-medium text-lg">Product Description</h4>
+                  <p className="text-sm text-[#0F1111] pt-2">{comparisonData.description}</p>
                 </div>
-              )}
 
-              {/* Manufacturing Details */}
-              {comparisonData?.manufacturingDetails && comparisonData.manufacturingDetails.length > 0 && (
-                <div className="py-4 border-b border-[#e7e7e7]">
-                  <h3 className="text-[#0F1111] font-medium text-lg mb-2">Manufacturing Details</h3>
-                  <table className="w-full text-sm">
-                    <tbody>
-                      {comparisonData.manufacturingDetails.slice(0, 5).map((detail, index) => (
-                        <tr key={index}>
-                          <td className="py-1 pr-4 align-top text-[#565959]" style={{ width: '200px' }}>
-                            {detail.label.replace(/[\n\s:‏‎]+/g, ' ').trim()}
-                          </td>
-                          <td className="py-1 text-[#0F1111]">{detail.value}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
               )}
+            </div>
 
-              {/* Size & Color Options */}
-              {((comparisonData?.sizes && comparisonData.sizes.length > 0) || 
-                (comparisonData?.colors && comparisonData.colors.length > 0)) && (
+            {/* Product Details */}
+            {comparisonData?.productDetails && comparisonData.productDetails.length > 0 && (
+              <div className="py-4 border-b border-[#e7e7e7]">
+                <h3 className="text-[#0F1111] font-medium text-lg mb-2">Product Details</h3>
+                <table className="w-full text-sm">
+                  <tbody>
+                    {comparisonData.productDetails.map((detail, index) => (
+                      <tr key={index}>
+                        <td className="py-1 pr-4 align-top text-[#565959]" style={{ width: '200px' }}>
+                          {detail.label.replace(/[\n\s:‏‎]+/g, ' ').trim()}
+                        </td>
+                        <td className="py-1 text-[#0F1111]">{detail.value}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+
+            {/* Manufacturing Details */}
+            {comparisonData?.manufacturingDetails && comparisonData.manufacturingDetails.length > 0 && (
+              <div className="py-4 border-b border-[#e7e7e7]">
+                <h3 className="text-[#0F1111] font-medium text-lg mb-2">Manufacturing Details</h3>
+                <table className="w-full text-sm">
+                  <tbody>
+                    {comparisonData.manufacturingDetails.slice(0, 5).map((detail, index) => (
+                      <tr key={index}>
+                        <td className="py-1 pr-4 align-top text-[#565959]" style={{ width: '200px' }}>
+                          {detail.label.replace(/[\n\s:‏‎]+/g, ' ').trim()}
+                        </td>
+                        <td className="py-1 text-[#0F1111]">{detail.value}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+
+            {/* Size & Color Options */}
+            {((comparisonData?.sizes && comparisonData.sizes.length > 0) ||
+              (comparisonData?.colors && comparisonData.colors.length > 0)) && (
                 <div className="py-4 border-[#e7e7e7]">
                   {comparisonData?.sizes && comparisonData.sizes.length > 0 && (
                     <div className="mb-4">
@@ -1073,39 +1083,39 @@ const FinalPage = () => {
                 </div>
               )}
 
-              {/* Delivery & Analysis */}
-              <div className="py-4 space-y-4">
-                {/* <div className="text-[#007600] font-medium">
+            {/* Delivery & Analysis */}
+            <div className="py-4 space-y-4">
+              {/* <div className="text-[#007600] font-medium">
                   {comparisonData?.deliveryDate}
                 </div> */}
-                
-                {/* <div className="bg-[#F4F4F4] p-4 rounded">
+
+              {/* <div className="bg-[#F4F4F4] p-4 rounded">
                   <h3 className="text-[#0F1111] font-medium mb-2">Comparison Analysis</h3>
                   <p className="text-sm text-[#333333] leading-relaxed">{comparisonData?.notes}</p>
                 </div> */}
 
-                {/* Action Buttons */}
-                <div className="flex flex-col gap-3 mt-6">
-                  <button
-                    onClick={handleProceedAndExportToSheets}
-                    disabled={isExporting}
-                    className="w-full bg-[#FFD814] hover:bg-[#F7CA00] text-[#0F1111] py-3 px-4 rounded-lg 
+              {/* Action Buttons */}
+              <div className="flex flex-col gap-3 mt-6">
+                <button
+                  onClick={handleProceedAndExportToSheets}
+                  disabled={isExporting}
+                  className="w-full bg-[#FFD814] hover:bg-[#F7CA00] text-[#0F1111] py-3 px-4 rounded-lg 
                     shadow-sm border border-[#FCD200] font-medium text-base transition-colors
                     disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-                  >
-                    {isExporting ? (
-                      <>
-                        <svg className="animate-spin h-5 w-5 text-[#0F1111]" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                        </svg>
-                        <span>Exporting to Google Sheets...</span>
-                      </>
-                    ) : (
-                      'Export to Google Sheets'
-                    )}
-                  </button>
-                  {/* <button
+                >
+                  {isExporting ? (
+                    <>
+                      <svg className="animate-spin h-5 w-5 text-[#0F1111]" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                      </svg>
+                      <span>Exporting to Google Sheets...</span>
+                    </>
+                  ) : (
+                    'Export to Google Sheets'
+                  )}
+                </button>
+                {/* <button
                     onClick={handleDownload}
                     className="w-full bg-[#F0F2F2] hover:bg-[#DFE1E1] text-[#0F1111] py-2 px-4 rounded-lg 
                     shadow-sm border border-[#D5D9D9]"
@@ -1119,12 +1129,13 @@ const FinalPage = () => {
                   >
                     Print Report
                   </button> */}
-                </div>
               </div>
             </div>
           </div>
         </div>
       </div>
-  )};
+    </div>
+  )
+};
 
 export default FinalPage;
