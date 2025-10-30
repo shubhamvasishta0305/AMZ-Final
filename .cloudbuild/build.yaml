@@ -45,8 +45,10 @@ steps:
     - '--platform=managed'
     - '--allow-unauthenticated'
     - '--port=5000'
-    - '--timeout=300s'
+    - '--timeout=600s'  # Increased timeout
     - '--set-env-vars=NODE_ENV=production'
+    - '--cpu=1'
+    - '--memory=512Mi'
   
   # Deploy to Cloud Run - Python Service
   - name: 'gcr.io/cloud-builders/gcloud'
