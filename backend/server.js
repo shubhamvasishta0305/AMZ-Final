@@ -1,3 +1,25 @@
+// Simple test endpoint - add this with your other routes
+app.get('/test', (req, res) => {
+  console.log('✅ Test endpoint hit successfully');
+  res.json({ 
+    message: 'Backend is working!', 
+    timestamp: new Date().toISOString(),
+    port: process.env.PORT || 5000,
+    nodeVersion: process.version
+  });
+});
+
+// Health check endpoint
+app.get('/health', (req, res) => {
+  console.log('✅ Health check endpoint hit');
+  res.status(200).json({ 
+    status: 'OK', 
+    service: 'backend',
+    timestamp: new Date().toISOString(),
+    port: process.env.PORT || 5000
+  });
+});
+
 // DEBUG: Server startup information
 console.log('🚀 Starting backend server...');
 console.log('📁 Current directory:', process.cwd());
