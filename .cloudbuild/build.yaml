@@ -22,7 +22,7 @@ steps:
     args: ['push', 'gcr.io/$PROJECT_ID/python-service:$COMMIT_SHA']
   
   # Deploy to Cloud Run
-  - name: 'gcr.io/cloud-builders/gcloud'
+   - name: 'gcr.io/cloud-builders/gcloud'
     args:
     - 'run'
     - 'deploy'
@@ -32,6 +32,7 @@ steps:
     - '--platform=managed'
     - '--allow-unauthenticated'
     - '--port=80'
+    - '--set-env-vars=VITE_API_URL=https://backend-service-$PROJECT_ID-uc.a.run.app,VITE_PYTHON_SERVICE_URL=https://python-service-$PROJECT_ID-uc.a.run.app'
   
   - name: 'gcr.io/cloud-builders/gcloud'
     args:
