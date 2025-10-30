@@ -1,16 +1,16 @@
-import { Navigate, useLocation } from 'react-router-dom';
+// src/components/ProtectedRoute.jsx
+import { Navigate } from "react-router-dom";
 
-function ProtectedRoute({ element: Element }) {
-  const user = JSON.parse(localStorage.getItem('user'));
-  const location = useLocation();
-
-  // If no valid user token is found, redirect to login page
-  if (!user || !user.token) {
-    return <Navigate to="/" state={{ from: location }} replace />;
+const ProtectedRoute = ({ element: Element }) => {
+  const user = localStorage.getItem("user");
+  if (!user) {
+    return <Navigate to="/" replace />;
   }
-
-  // Otherwise, render the protected component
+  // Element may be a component or a function returning component
+  if (typeof Element === "function") {
+    return <Element />;
+  }
   return <Element />;
-}
+};
 
 export default ProtectedRoute;

@@ -4,3 +4,5 @@ flask-cors
 pillow
 google-generativeai
 google-cloud-storage
+gspread
+oauth2client

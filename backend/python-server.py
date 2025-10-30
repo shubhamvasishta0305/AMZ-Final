@@ -4,20 +4,294 @@ load_dotenv()
 import os
 import io
 import uuid
+from datetime import datetime
 import json
 import re
 import subprocess
 import sys
 from flask import Flask, request, jsonify, send_from_directory, send_file
-from flask_cors import CORS
+
+
+import gspread
+from google.oauth2.service_account import Credentials
+
+def connect_to_sheet():
+    try:
+        scopes = [
+            "https://www.googleapis.com/auth/spreadsheets",
+            "https://www.googleapis.com/auth/drive"
+        ]
+        creds = Credentials.from_service_account_file("service_account.json", scopes=scopes)
+        client = gspread.authorize(creds)
+        sheet = client.open("UserCredentials").worksheet("Data")
+        print("✅ Connected to Google Sheet: UserCredentials → Data")
+        return sheet
+    except Exception as e:
+        print(f"❌ Error connecting to Google Sheets: {e}")
+        raise
+
+
+
+
+import uuid
+import smtplib
+from email.mime.text import MIMEText
+from threading import Thread
+import time
+import requests
+
+def send_reset_email(email, token):
+    """
+    Sends reset email using Google Apps Script Web App.
+    """
+    try:
+        apps_script_url = "https://script.google.com/macros/s/AKfycbwILFRXaL-mo7Gr7IH5HujSkN3vxYytYr_4097xh26C4EsoK-nYHFThaHKx3T5oZmjk/exec"
+        payload = {"email": email, "token": token}
+
+        response = requests.post(apps_script_url, json=payload)
+        response.raise_for_status()
+
+        result = response.json()
+        if result.get("success"):
+            print(f"✅ Reset email sent successfully to {email}")
+        else:
+            print(f"⚠️ Apps Script responded with error: {result.get('error')}")
+    except Exception as e:
+        print(f"❌ Error sending reset email via Apps Script: {e}")
+
+
+
+
 from PIL import Image
 import google.generativeai as genai
 from google.cloud import storage
 from google.generativeai import types
 from google.cloud.exceptions import Forbidden
 
+from flask_cors import CORS
+
 app = Flask(__name__)
-CORS(app)
+
+# ✅ Enable CORS properly for your frontend
+CORS(app, resources={r"/*": {"origins": "http://localhost:5173"}}, supports_credentials=True)
+
+
+
+
+
+
+@app.before_request
+def handle_preflight():
+    if request.method == "OPTIONS":
+        resp = app.make_default_options_response()
+        headers = resp.headers
+
+        headers["Access-Control-Allow-Origin"] = "http://localhost:5173"
+        headers["Access-Control-Allow-Methods"] = "GET, POST, OPTIONS, PUT, DELETE"
+        headers["Access-Control-Allow-Headers"] = "Content-Type, Authorization"
+        headers["Access-Control-Allow-Credentials"] = "true"
+
+        return resp
+
+
+# ============================================
+# ✅ GOOGLE SHEET LOGIN CONFIGURATION (NEW)
+# ============================================
+
+# Define the scope for Google Sheets access
+SHEET_SCOPE = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
+
+# Load credentials from service account file (must exist in same folder)
+SERVICE_ACCOUNT_FILE = "service_account.json"  # or your file name
+SHEET_NAME = "UserCredentials"                 # your Google Sheet name
+TAB_NAME = "Data"                              # your tab name
+
+try:
+    scopes = [
+        "https://www.googleapis.com/auth/spreadsheets",
+        "https://www.googleapis.com/auth/drive"
+    ]
+    creds = Credentials.from_service_account_file(SERVICE_ACCOUNT_FILE, scopes=scopes)
+    client = gspread.authorize(creds)
+
+    sheet = client.open(SHEET_NAME).worksheet(TAB_NAME)
+    print(f"✅ Connected to Google Sheet: {SHEET_NAME} → {TAB_NAME}")
+
+except Exception as e:
+    print(f"❌ Error connecting to Google Sheets: {e}")
+    sheet = None
+
+@app.route("/login", methods=["POST", "OPTIONS"])
+def login():
+    if request.method == "OPTIONS":
+        return jsonify({"status": "ok"}), 200
+
+    data = request.get_json()
+    email = data.get("email")
+    password = data.get("password")
+
+    print("Incoming Login Request:", email, password)
+
+    if not email or not password:
+        return jsonify({"success": False, "error": "Email and password are required"}), 400
+
+    try:
+        records = sheet.get_all_records()
+
+        print("All Sheet Records:", records)
+
+
+        for row in records:
+            if row.get("Email", "").strip().lower() == email.strip().lower():
+                if str(row.get("Password")).strip() == str(password).strip():
+                    first_login = str(row.get("FirstLogin", "")).strip().lower()
+                    if first_login in ["yes", "true", "1"]:
+                        return jsonify({
+                            "success": True,
+                            "first_time": True,
+                            "message": "First-time login. Please change password."
+                        })
+                    else:
+                        return jsonify({"success": True, "first_time": False})
+                else:
+                    return jsonify({"success": False, "error": "Incorrect password"}), 401
+        return jsonify({"success": False, "error": "User not found"}), 404
+
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)}), 500
+    
+@app.route('/forgot-password', methods=['POST'])
+def forgot_password():
+    try:
+        data = request.get_json()
+        email = data.get('email')
+
+        if not email:
+            return jsonify({"error": "Email is required"}), 400
+
+        records = sheet.get_all_records()
+
+        # Find user row
+        for i, row in enumerate(records, start=2):
+            if row['Email'].strip().lower() == email.strip().lower():
+                # Ensure columns exist
+                headers = sheet.row_values(1)
+                if "Password Requested by User" not in headers:
+                    sheet.update_cell(1, len(headers)+1, "Password Requested by User")
+                    headers.append("Password Requested by User")
+
+                if "Approve" not in headers:
+                    sheet.update_cell(1, len(headers)+1, "Approve")
+                    headers.append("Approve")
+
+                col_request = headers.index("Password Requested by User") + 1
+                sheet.update_cell(i, col_request, "Yes")
+
+                # Start monitoring for admin approval asynchronously
+                Thread(target=monitor_admin_approval, args=(email, i, headers)).start()
+
+                return jsonify({"message": "Request noted. Please contact your admin."}), 200
+
+        return jsonify({"error": "Email not found"}), 404
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+def monitor_admin_approval(email, row_index, headers):
+    """Background monitor for admin approval"""
+    try:
+        print(f"🔍 Monitoring approval for {email}...")
+        col_approve = headers.index("Approve") + 1
+
+        for _ in range(20):  # 20×30s = 10 mins max wait
+            cell_value = sheet.cell(row_index, col_approve).value
+            if cell_value and cell_value.strip().lower() in ["yes", "approved", "approve"]:
+                print(f"✅ Admin approved password reset for {email}")
+                token = str(uuid.uuid4())
+                col_token = None
+
+                if "Reset Token" not in headers:
+                    sheet.update_cell(1, len(headers)+1, "Reset Token")
+                    headers.append("Reset Token")
+
+                col_token = headers.index("Reset Token") + 1
+                sheet.update_cell(row_index, col_token, token)
+
+                send_reset_email(email, token)
+                print(f"📧 Reset email sent to {email}")
+                return
+            time.sleep(30)
+
+        print(f"⏰ Timeout waiting for admin approval for {email}")
+    except Exception as e:
+        print(f"❌ monitor_admin_approval error: {e}")
+
+
+
+
+@app.route("/change-password", methods=["POST"])
+def change_password():
+    global sheet  # ✅ Move this here, to the top!
+
+    try:
+        if sheet is None:
+            # reconnect if the sheet wasn't initialized at startup
+            creds = ServiceAccountCredentials.from_json_keyfile_name(SERVICE_ACCOUNT_FILE, SHEET_SCOPE)
+            client = gspread.authorize(creds)
+            sheet = client.open(SHEET_NAME).sheet1
+
+        data = request.get_json()
+        email = data.get("email")
+        new_password = data.get("new_password")
+
+        if not email or not new_password:
+            return jsonify({"status": "error", "message": "Missing email or password"}), 400
+
+        # Get all records
+        records = sheet.get_all_records()
+
+        # Find user row and update
+        for i, row in enumerate(records, start=2):  # start=2 because row 1 = header
+            if row.get("Email", "").strip().lower() == email.strip().lower():
+                sheet.update_acell(f"B{i}", new_password)  # B = Password
+                sheet.update_acell(f"D{i}", "No")          # D = FirstLogin
+                print(f"✅ Password updated for {email}")
+                return jsonify({"status": "updated"}), 200
+
+        return jsonify({"status": "error", "message": "User not found"}), 404
+
+    except Exception as e:
+        print("❌ Error changing password:", e)
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+
+
+        # --- Connect to Google Sheet ---
+        scopes = ["https://www.googleapis.com/auth/spreadsheets","https://www.googleapis.com/auth/drive"]
+        creds = Credentials.from_service_account_file("service_account.json", scopes=scopes)
+        client = gspread.authorize(creds)
+
+        sheet = client.open("UserCredentials").worksheet("Data")  # 👈 your sheet name + tab
+        records = sheet.get_all_records()
+
+        # --- Find user and update password ---
+        for i, row in enumerate(records, start=2):  # start=2 to skip header row
+            if row["Email"].strip().lower() == email.strip().lower():
+                sheet.update_acell(f"B{i}", new_password)   # Column B → Password
+                sheet.update_acell(f"D{i}", "No")           # Column D → FirstLogin
+                return jsonify({"status": "updated"})
+
+        return jsonify({"status": "error", "message": "User not found"}), 404
+
+    except Exception as e:
+        print("Error changing password:", e)
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+
+
+
+
+
 
 # --- CONFIGURATION ---
 GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY")
@@ -578,7 +852,158 @@ def generate_title_description():
       import traceback
       print(traceback.format_exc())
       return jsonify({'success': False, 'error': f'Internal server error: {str(e)}'}), 500
+  
 
+
+
+
+
+# ============================================================
+# ✅ ADD THIS FIXED ENDPOINT FOR /reset-password (CORS + email)
+# ============================================================
+
+@app.route("/reset-password", methods=["POST"])
+def reset_password():
+    try:
+        data = request.get_json()
+        email = data.get("email")
+
+        if not email:
+            return jsonify({"error": "Email required"}), 400
+
+        sheet = connect_to_sheet()
+        rows = sheet.get_all_records()
+
+        for i, row in enumerate(rows, start=2):  # skip header
+            if row["Email"].strip().lower() == email.strip().lower():
+                approve_status = str(row.get("Approve", "")).strip().lower()
+
+                # Step 1️⃣: If not approved yet — just mark request
+                if approve_status in ("", "no", "pending"):
+                    sheet.update_acell(f"E{i}", "Yes")  # Password Requested by User
+                    sheet.update_acell(f"F{i}", "Pending")  # Approve
+                    return jsonify({
+                        "success": True,
+                        "pending_approval": True,
+                        "message": "Request noted. Wait for admin approval."
+                    }), 200
+
+                # Step 2️⃣: If approved — send reset email only once
+                if approve_status == "yes":
+                    reset_token = str(uuid.uuid4())
+                    sheet.update_acell(f"H{i}", datetime.now().strftime("%m/%d/%Y"))  # Last Emailed
+                    sheet.update_acell(f"I{i}", reset_token)  # Reset Token
+                    sheet.update_acell(f"F{i}", "Done")  # mark approval as completed
+
+                    FRONTEND_URL = os.getenv("FRONTEND_URL", "http://localhost:5173")
+                    token = str(uuid.uuid4())
+
+                    reset_link = f"{FRONTEND_URL}/reset-password?token={token}&email={email}"
+                    send_reset_email(email, reset_link)
+
+                    return jsonify({
+                        "success": True,
+                        "message": "Reset email sent successfully!"
+                    }), 200
+
+                # Step 3️⃣: Already handled state
+                if approve_status == "done":
+                    return jsonify({
+                        "success": False,
+                        "message": "Reset link already sent."
+                    }), 200
+
+                return jsonify({"error": "Invalid approval state"}), 400
+
+        return jsonify({"error": "Email not found"}), 404
+
+    except Exception as e:
+        print(f"❌ Error in /reset-password: {e}")
+        return jsonify({"success": False, "error": str(e)}), 500
+
+
+# -----------------------
+# Update password with token
+# -----------------------
+@app.route("/reset-password/<token>", methods=["POST"])
+def update_password(token):
+    try:
+        data = request.get_json()
+        new_password = data.get("password")
+
+        if not new_password:
+            return jsonify({"success": False, "error": "Password required"}), 400
+
+        sheet = connect_to_sheet()
+        rows = sheet.get_all_records()
+
+        for i, row in enumerate(rows, start=2):
+            if str(row.get("Reset Token", "")).strip() == token.strip():
+                sheet.update_acell(f"B{i}", new_password)
+                sheet.update_acell(f"I{i}", "")  # clear token
+                sheet.update_acell(f"E{i}", "No")  # reset request flag
+                sheet.update_acell(f"F{i}", "No")  # reset approval
+
+                return jsonify({
+                    "success": True,
+                    "message": "Password updated successfully!"
+                }), 200
+
+        return jsonify({"success": False, "error": "Invalid or expired token"}), 400
+
+    except Exception as e:
+        print(f"❌ Error in /reset-password/<token>: {e}")
+        return jsonify({"success": False, "error": str(e)}), 500
+    
+
+    # -----------------------
+# Common endpoint for password updates
+# Handles both first-time and reset-password flows
+# -----------------------
+# -----------------------
+# Common endpoint for password updates
+# Handles both first-time and reset-password flows
+# -----------------------
+@app.route("/update-password", methods=["POST"])
+def update_password_common():
+    try:
+        data = request.get_json()
+        email = data.get("email")
+        new_password = data.get("password")
+        token = data.get("token")
+
+        if not email or not new_password:
+            return jsonify({"success": False, "error": "Email and password required"}), 400
+
+        sheet = connect_to_sheet()
+        rows = sheet.get_all_records()
+
+        for i, row in enumerate(rows, start=2):
+            # Case 1️⃣: Reset password flow → verify token
+            if token and str(row.get("Reset Token", "")).strip() == str(token).strip():
+                sheet.update_acell(f"B{i}", new_password)
+                sheet.update_acell(f"I{i}", "")  # clear token
+                sheet.update_acell(f"E{i}", "No")
+                sheet.update_acell(f"F{i}", "No")
+                return jsonify({"success": True, "message": "Password updated successfully"}), 200
+
+            # Case 2️⃣: First-time login → no token, just email
+            if not token and row["Email"].strip().lower() == email.strip().lower():
+                sheet.update_acell(f"B{i}", new_password)
+                sheet.update_acell(f"D{i}", "No")  # reset FirstLogin to No
+                return jsonify({"success": True, "message": "Password set successfully"}), 200
+
+        return jsonify({"success": False, "error": "Invalid email or token"}), 400
+
+    except Exception as e:
+        print(f"❌ Error in /update-password: {e}")
+        return jsonify({"success": False, "error": str(e)}), 500
+
+
+
+
+# -----------------------
+# Run server
+# -----------------------
 if __name__ == "__main__":
-   app.run(host="0.0.0.0", port=5000, debug=True)
-
+    app.run(host="0.0.0.0", port=5000, debug=True)
