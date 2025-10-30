@@ -1,3 +1,4 @@
+import { API_URL } from "../config/api";
 import { useNavigate, useLocation } from "react-router-dom";
 import { GoogleLogin } from "@react-oauth/google";
 import { jwtDecode } from "jwt-decode";
