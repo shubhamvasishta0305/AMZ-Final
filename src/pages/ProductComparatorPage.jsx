@@ -6,7 +6,7 @@
 
 
 
-
+import { API_URL } from '../config/api';
 import React, { useState, useRef, useLayoutEffect, useEffect } from 'react';
 import { Wand2, Check, Edit2, Eye, ExternalLink, Star, Save, Plus, Loader2 } from 'lucide-react';
 import { goldStandardProduct } from '../data/mockData.js';
