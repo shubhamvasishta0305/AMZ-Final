@@ -1,5 +1,5 @@
 // Page 4b: New Product Creation Page with Form and Gold Standard Reference
-
+import { API_URL } from '../config/api';
 import { useState, useEffect, useRef, useLayoutEffect } from 'react';
 import { Star, Save, Plus, Check, Wand2, Edit2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
