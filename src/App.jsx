@@ -3,6 +3,7 @@ import Navbar from './components/Navbar';
 import ScrollToTop from './components/ScrollToTop';
 import DataSelectionPage from './pages/DataSelectionPage';
 import LoginPage from './pages/LoginPage';
+import ChangePasswordPage from './pages/ChangePasswordPage';
 import ComparisonSetupPage from './pages/ComparisonSetupPage';
 import FinalPage from './pages/FinalPage';
 // import ExistingProductEditorPage from './extra/ExistingProductEditorPage';
@@ -28,6 +29,7 @@ function AppContent() {
       {!hideNavbar && <Navbar />}
       <Routes>
         <Route path="/" element={<LoginPage />} />
+        <Route path="/change-password" element={<ChangePasswordPage />} />
         <Route 
           path="/seller-list" 
           element={
