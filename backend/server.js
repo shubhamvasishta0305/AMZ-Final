@@ -15,6 +15,31 @@ app.use(express.json());
 app.use(express.static('public'));
 app.use(express.urlencoded({ extended: true }));
 
+const express = require('express');
+const app = express();
+const cors = require('cors'); // Add this line if not present
+
+// Add CORS configuration - PASTE THIS CODE
+const allowedOrigins = [
+  'http://localhost:3000',
+  'http://localhost:5173',
+  'https://frontend-service-ops-excellence-uc.a.run.app'
+];
+
+app.use(cors({
+  origin: function (origin, callback) {
+    // Allow requests with no origin (like mobile apps or curl requests)
+    if (!origin) return callback(null, true);
+    if (allowedOrigins.indexOf(origin) === -1) {
+      const msg = 'The CORS policy for this site does not allow access from the specified Origin.';
+      return callback(new Error(msg), false);
+    }
+    return callback(null, true);
+  },
+  credentials: true
+}));
+
+
 // Your Google Sheet CSV URL
 const SHEET_CSV_URL = 
 `https://docs.google.com/spreadsheets/d/1C6s96_hmDTYjwwkq5r4ekAh5FrtAvPJqN54WwYl_eVI/export?format=csv&gid=75817034`;
