@@ -1,5 +1,5 @@
 // Page 2: Seller List and Data Selection Page
-
+import { API_URL } from '../config/api';
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { fetchSheetData, fetchSellerData } from '../api/api';
