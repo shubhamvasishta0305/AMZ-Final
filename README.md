@@ -26,3 +26,17 @@
 #### Setup Environment
 1. Env file with gemini key
 2. Credentials.json file for Google Sheet Access
+
+## Deployment Status
+
+This project is automatically deployed to Google Cloud Platform when changes are pushed to the main branch.
+
+### Services:
+Frontend: React.js application
+Backend: Node.js API server  
+Python: Python service for data processing
+
+### Live URLs:
+Frontend: https://frontend-service-[PROJECT-ID]-uc.a.run.app
+Backend: https://backend-service-[PROJECT-ID]-uc.a.run.app
+Python: https://python-service-[PROJECT-ID]-uc.a.run.app
