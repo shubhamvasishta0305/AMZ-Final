@@ -1,5 +1,5 @@
 
-
+import { API_URL } from '../config/api';
 import { useEffect, useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import html2pdf from 'html2pdf.js';
