@@ -21,7 +21,7 @@ steps:
   - name: 'gcr.io/cloud-builders/docker'
     args: ['push', 'gcr.io/$PROJECT_ID/python-service:$COMMIT_SHA']
   
-  # Deploy to Cloud Run - Frontend
+    # Deploy to Cloud Run - Frontend
   - name: 'gcr.io/cloud-builders/gcloud'
     args:
     - 'run'
@@ -32,6 +32,8 @@ steps:
     - '--platform=managed'
     - '--allow-unauthenticated'
     - '--port=80'
+    - '--timeout=300s'
+    - '--set-env-vars=NODE_ENV=production'
   
   # Deploy to Cloud Run - Backend
   - name: 'gcr.io/cloud-builders/gcloud'
