@@ -1,6 +1,6 @@
 // Page 5: Image Comparison and AI Generation Page
 
-
+import { API_URL } from '../config/api';
 import { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { generateAIImage } from '../api/api';
