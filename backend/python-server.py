@@ -150,75 +150,92 @@ def upload_to_gcs(local_file_path, destination_blob_name):
        raise Exception(error_message)
 
 
-# --- PROMPT FUNCTIONS for IMAGE GENERATION ---
-
+# ===============================================================
+# NANO BAANA - PROMPT FUNCTIONS FOR IMAGE GENERATION (Final Version with Reference Rules)
+# ===============================================================
 
 def get_prompt_amazon_main_image():
-   return (
-       "High-quality professional fashion product photo for an Amazon listing main image. "
-       "The entire product must be shown, without being cropped, with a pure white background (RGB 255,255,255, hex #FFFFFF), "
-       "and the model standing upright. "
-       "Strict note: Keep the uploaded dress exactly as it is. Do not change the color, pattern, or design under any circumstances. "
-       "The product must fill at least 85% but not touch the image borders. "
-       "No props, no accessories, no packaging, no text, badges, graphics, or watermarks. "
-       "No mannequin, From head to toe, only a human model. Sharp focus, true-to-color, professional lighting. "
-       "Image must be at least 1600x1600 pixels. "
-       "Category: [Category], Gender: [Gender], Age Group: [AgeGroup], Style: [Style], Subcategory: [SubCategory]"
-   )
+    return (
+        "High-quality professional fashion product photo for an Amazon main listing image. "
+        "Important Rule for Nano Baana: Completely ignore the crop, zoom, or framing of the uploaded image. "
+        "Use the reference ONLY for product color, fabric, and design details — never copy its proportions or background. "
+        "ALWAYS show a complete, full-body model from head to toe standing upright, centered, and visible entirely inside the frame. "
+        "Do not crop any part of the body including feet or head — there must be clear space above the head and below the feet. "
+        "Generate in a 4:5 aspect ratio (portrait) suitable for e-commerce main product display. "
+        "Pure white background (#FFFFFF), even lighting, realistic shadows, and natural skin tone. "
+        "Do NOT hallucinate or alter the product’s original design, pattern, or color. "
+        "No props, accessories, packaging, logos, or watermarks. "
+        "Product should occupy around 75% of the frame without touching edges. "
+        "Ensure crisp focus, natural human pose, and professional composition. "
+        "Category: [Category], Gender: [Gender], Age Group: [AgeGroup], Style: [Style], Subcategory: [SubCategory]"
+    )
 
 
 def get_prompt_amazon_product_only_image():
-   return (
-       "Amazon fashion category compliant product image. Present the single product, fully visible, with a pure white background (RGB 255,255,255, hex #FFFFFF). "
-       "Product must fill 85%-90% of the frame but should not touch the edge. "
-       "Strict note: Keep the uploaded dress exactly as it is. Do not change the color, pattern, or design under any circumstances. "
-       "Do not include human body, model, props, accessories, packaging, text, logos, watermarks, badges, or additional graphics. "
-       "The image must be sharp, clear, and reflect true product color and details. "
-       "At least 1600x1600px resolution. "
-       "Category: [Category], Gender: [Gender], Age Group: [AgeGroup], Style: [Style], Subcategory: [SubCategory]"
-   )
+    return (
+        "Amazon fashion category compliant product-only image. "
+        "Important Rule for Nano Baana: No human model, mannequin, or body parts should appear. "
+        "If the uploaded image has a model or background noise, use it only as a reference — "
+        "Do NOT hallucinate, crop, or retain human parts. Extract and display only the product clearly. "
+        "Show the complete product on a pure white background (RGB 255,255,255, hex #FFFFFF). "
+        "The product must fill 85% of the frame but not touch the edges. "
+        "Strictly preserve product color, pattern, and design. "
+        "No text, graphics, logos, or watermarks. "
+        "Sharp focus, true-to-color, high-resolution (minimum 1600x1600px). "
+        "Category: [Category], Gender: [Gender], Age Group: [AgeGroup], Style: [Style], Subcategory: [SubCategory]"
+    )
 
 
 def get_prompt_amazon_lifestyle_image():
-   return (
-       "Lifestyle/gallery image for Amazon fashion. Show the model wearing the product in a real-world, vibrant event or indoor setting "
-       "(such as a boutique, studio, wedding, or party scene). "
-       "Strict note: Keep the uploaded dress exactly as it is. Do not change the color, pattern, or design under any circumstances. "
-       "The product must remain the focus, fully visible, without text, watermarks, or unrelated props. "
-       "Professional, realistic lighting only. Pure white background NOT required for this type. "
-       "Category: [Category], Gender: [Gender], Age Group: [AgeGroup], Style: [Style], Subcategory: [SubCategory]"
-   )
+    return (
+        "Lifestyle or gallery image for Amazon fashion. "
+        "Important Rule for Nano Baana: Must include a full-body human model (head-to-toe visible, not cropped). "
+        "If the reference image shows only a half-body or unclear background, use it only as a reference for the outfit — "
+        "Do NOT hallucinate new designs or modify the product. "
+        "Show the model wearing the same product in a realistic lifestyle setting (studio, boutique, outdoor, or event). "
+        "The product must remain the focus, fully visible, and unchanged. "
+        "No watermarks, no random props, no over-editing. "
+        "Professional, realistic lighting. White background not required. "
+        "Category: [Category], Gender: [Gender], Age Group: [AgeGroup], Style: [Style], Subcategory: [SubCategory]"
+    )
 
 
 def get_prompt_amazon_angle_image():
-   return (
-       "Amazon-compliant model image, showing a left, right, or back view. "
-       "Model must be standing from head to toe, product fully in frame, at least 85% of the image, not cut off. "
-       "Strict note: Keep the uploaded dress exactly as it is. Do not change the color, pattern, or design under any circumstances. "
-       "No text, graphics, badges, watermarks, packaging, or unrelated props. "
-       "Clean, subtle festive or indoor background permitted, but product remains clearly visible. "
-       "Category: [Category], Gender: [Gender], Age Group: [AgeGroup], Style: [Style], Subcategory: [SubCategory]"
-   )
+    return (
+        "Amazon-compliant angle view image (left, right, or back). "
+        "Important Rule for Nano Baana: Always show a complete human model from head to toe — no cropping or zooming. "
+        "If the user image is half-body or low quality, use it as a color/pattern reference only. "
+        "Do NOT change the outfit design or hallucinate missing parts. Follow this prompt as the final rule. "
+        "Product must fill around 85% of the frame, not touch borders. "
+        "No text, packaging, graphics, or watermarks. "
+        "Clean studio background allowed (not white). "
+        "Category: [Category], Gender: [Gender], Age Group: [AgeGroup], Style: [Style], Subcategory: [SubCategory]"
+    )
 
 
 def get_prompt_amazon_infographic():
-   return (
-       "Infographic gallery image for Amazon fashion product, showing the traditional suit centered on soft pastel (not pure white) background. "
-       "Include minimalist icons and a clean Product Details sectionâ€”use minimal, readable text, clear separation, NO overlaying text on product and NO spelling errors. "
-       "The product must remain the focus and fully visible. At least 1600x1600px resolution. "
-       "Strict note: Keep the uploaded dress exactly as it is. Do not change the color, pattern, or design under any circumstances. "
-       "No cropping, all text complete and readable, professional high-end appearance. "
-       "Category: [Category], Gender: [Gender], Age Group: [AgeGroup], Style: [Style], Subcategory: [SubCategory]"
-   )
+    return (
+        "Amazon-compliant model image showing a left, right, or back view. "
+        "Important Rule for Nano Baana: Always generate a full-body human model from head to toe, no matter how cropped or partial the reference image is. "
+        "Ignore the framing, crop, or zoom of the uploaded photo — use it only for color, pattern, and texture reference. "
+        "Model must stand naturally, visible from head to toe with space above and below. "
+        "Product must fill about 85% of the frame, not touching borders. "
+        "Strictly preserve original design details — do not change fabric, color, or cut. "
+        "No text, graphics, packaging, badges, or watermarks. "
+        "Clean, minimal indoor or studio background allowed. "
+        "Professional lighting and realistic proportions, minimum 1600x1600px resolution. "
+        "Category: [Category], Gender: [Gender], Age Group: [AgeGroup], Style: [Style], Subcategory: [SubCategory]"
+    )
 
 
 PROMPT_FUNCTIONS = [
-   get_prompt_amazon_main_image,
-   get_prompt_amazon_product_only_image,
-   get_prompt_amazon_lifestyle_image,
-   get_prompt_amazon_angle_image,
-   get_prompt_amazon_infographic
+    get_prompt_amazon_main_image,         # ✅ Full human model, head-to-toe
+    get_prompt_amazon_product_only_image, # 🚫 No model
+    get_prompt_amazon_lifestyle_image,    # ✅ Full human model
+    get_prompt_amazon_angle_image,        # ✅ Full human model
+    get_prompt_amazon_infographic         # 🚫 No model
 ]
+
 
 
 def replace_placeholders(prompt: str, attributes: dict) -> str:
